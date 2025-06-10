@@ -44,14 +44,6 @@ pipeline {
                 branch 'master'
             }            
             steps {
-                script {
-                    def version = readFile('version-beta.conf').trim()
-                    env.versionTag = version
-                    echo "Using version from version-beta.conf: ${env.versionTag}"               
-                }
-                sh """
-                sed -i 's/version = "[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+"/version = "${env.versionTag}"/g' pyproject.toml
-                """
                 sh '''
                 sed -i -E 's/^(name *= *")superclient(")/\\1superclient-beta\\2/' pyproject.toml
                 '''                
@@ -71,14 +63,6 @@ pipeline {
                 branch 'latest'
             }            
             steps {
-                script {
-                    def version = readFile('version.conf').trim()
-                    env.versionTag = version
-                    echo "Using version from version.conf: ${env.versionTag}"               
-                }
-                sh """
-                sed -i 's/version = "[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+"/version = "${env.versionTag}"/g' pyproject.toml
-                """
                 sh 'pip install --quiet build twine'
                 sh 'python -m build'
                 withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
@@ -94,7 +78,17 @@ pipeline {
             when {
                 branch 'latest'
             }       
-            steps {               
+            steps { 
+                script {
+                    def version = sh(
+                        script: '''
+                        python3 -c "import toml; print(toml.load('pyproject.toml')['project']['version'])"
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    env.versionTag = version
+                }                              
                 sh """
                     curl -L https://github.com/cli/cli/releases/download/v2.40.0/gh_2.40.0_linux_amd64.tar.gz -o gh.tar.gz 
                     tar -xvf gh.tar.gz
