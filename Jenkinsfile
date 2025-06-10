@@ -41,7 +41,7 @@ pipeline {
             
         stage('Beta Release') {
             when {
-                branch 'master'
+                branch 'latest'
             }            
             steps {
                 sh '''
