@@ -49,21 +49,14 @@ pipeline {
                 // sh """
                 //   sed -i -r "s/superclient/superclient-beta/g" pyproject.toml
                 // """ 
+                sh """
+                sed -i -E 's/(^name *= *")superclient("/)/\1superclient-beta\2/' pyproject.toml
+                """
                 // sh "sed -i \'s/version = \"[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\"/version = \"${env.versionTag}\"/g\' pyproject.toml"
                 // sh """  
                 //     C_INCLUDE_PATH=/usr/include/librdkafka LIBRARY_PATH=/usr/include/librdkafka /tmp/.local/bin/pdm build
                 // """
-                sh 'pip install build'
-                sh '''
-                    pip install toml
-                    python -c "
-        import toml
-        data = toml.load('pyproject.toml')
-        data['project']['name'] = 'superclient-beta'
-        with open('pyproject.toml', 'w') as f:
-            toml.dump(data, f)
-        "
-                '''                
+                sh 'pip install build'               
                 sh 'python -m build'
                 sh 'ls dist/'
                 // withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
