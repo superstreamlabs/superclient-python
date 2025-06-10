@@ -54,7 +54,7 @@ pipeline {
                 sh '''
                 sed -i -E 's/^(name *= *")superclient(")/\\1superclient-beta\\2/' pyproject.toml
                 '''                
-                sh 'pip install build'
+                sh 'pip install --quiet build twine'
                 sh 'python -m build'
                 sh 'ls dist/'
                 withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
