@@ -53,19 +53,19 @@ pipeline {
                 // sh """  
                 //     C_INCLUDE_PATH=/usr/include/librdkafka LIBRARY_PATH=/usr/include/librdkafka /tmp/.local/bin/pdm build
                 // """
-        sh '''
-            pip install toml
+                sh '''
+                    pip install toml
 
-            cat <<EOF > update_name.py
-import toml
-data = toml.load('pyproject.toml')
-data['project']['name'] = 'superclient-beta'
-with open('pyproject.toml', 'w') as f:
-    toml.dump(data, f)
-EOF
+                    cat <<EOF > update_name.py
+        import toml
+        data = toml.load('pyproject.toml')
+        data['project']['name'] = 'superclient-beta'
+        with open('pyproject.toml', 'w') as f:
+            toml.dump(data, f)
+        EOF
 
-            python3 update_name.py
-        '''                
+                    python3 update_name.py
+                '''                
                 sh 'pip install build'               
                 sh 'python -m build'
                 sh 'ls dist/'
