@@ -79,6 +79,7 @@ pipeline {
                 branch 'latest'
             }       
             steps { 
+                sh 'pip install toml'
                 script {
                     def version = sh(
                         script: '''
