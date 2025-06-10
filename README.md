@@ -87,11 +87,21 @@ pip install superclient
 
 ### Step 2: Run
 
-The package ships with a `sitecustomize.py` entry-point, therefore Python imports the agent automatically before your application's code starts. If `sitecustomize` is disabled in your environment, you can initialize manually:
+The package ships with a `sitecustomize.py` entry-point, therefore Python imports the agent automatically before your application's code starts. This is the recommended and default way to use Superclient.
+
+#### Manual Initialization (Only if needed)
+
+If `sitecustomize` is disabled in your environment (e.g., when using `python -S` or when `PYTHONNOUSERSITE` is set), you can initialize manually by adding this import at the very beginning of your application's main entry point (e.g., `main.py`, `app.py`, or `__init__.py`):
 
 ```python
 import superclient  # side-effects automatically enable the agent
+
+# Your application code follows
+from kafka import KafkaProducer
+# ... rest of your imports and code
 ```
+
+Note: The manual import must be placed before any Kafka-related imports to ensure proper interception of producer creation.
 
 ### Docker Integration
 
