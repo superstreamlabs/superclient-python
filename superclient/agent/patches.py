@@ -3,7 +3,7 @@
 import os
 from typing import Any, Dict
 
-from ..logger import get_logger
+from ..util.logger import get_logger
 from .tracker import ProducerTracker, Heartbeat
 from .metadata import fetch_metadata, optimal_cfg
 from .clients import send_clients_msg
@@ -33,7 +33,7 @@ def patch_kafka_python(mod):
         if client_id.startswith(_SUPERLIB_PREFIX):
             return orig_init(self, *args, **kwargs)
         topics_env = [t.strip() for t in os.getenv("SUPERSTREAM_TOPICS_LIST", "").split(",") if t.strip()]
-        metadata = fetch_metadata(bootstrap, orig_cfg)
+        metadata = fetch_metadata(bootstrap, orig_cfg, "kafka-python")
         opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg)
         for k, v in opt_cfg.items():
             snake = k.replace(".", "_")
@@ -95,7 +95,7 @@ def patch_aiokafka(mod):
         if client_id.startswith(_SUPERLIB_PREFIX):
             return orig_init(self, *args, **kwargs)
         topics_env = [t.strip() for t in os.getenv("SUPERSTREAM_TOPICS_LIST", "").split(",") if t.strip()]
-        metadata = fetch_metadata(bootstrap, orig_cfg)
+        metadata = fetch_metadata(bootstrap, orig_cfg, "aiokafka")
         opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg)
         for k, v in opt_cfg.items():
             if kwargs.get(k) != v:
@@ -152,7 +152,7 @@ def patch_confluent(mod):
         if client_id.startswith(_SUPERLIB_PREFIX):
             return orig_init(self, conf, *args, **kwargs)
         topics_env = [t.strip() for t in os.getenv("SUPERSTREAM_TOPICS_LIST", "").split(",") if t.strip()]
-        metadata = fetch_metadata(bootstrap, conf)
+        metadata = fetch_metadata(bootstrap, conf, "confluent")
         opt_cfg = optimal_cfg(metadata, topics_env, conf)
         for k, v in opt_cfg.items():
             if conf.get(k) != v:

@@ -2,6 +2,14 @@
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+from superclient import __version__ as _LIB_VERSION
+
+@dataclass
+class MetadataMessage:
+    """Message for metadata communication."""
+    topics_configuration: List[TopicConfiguration]
+    report_interval_ms: Optional[int] = None
+    active: bool = True
 
 @dataclass
 class TopicConfiguration:
@@ -17,8 +25,8 @@ class ClientMessage:
     client_id: str
     ip_address: str
     type: str = "producer"
-    message_type: str = "client_info"
-    version: str = "0.1.0"
+    message_type: str = "client_stats"
+    version: str = field(default_factory=lambda: _LIB_VERSION)
     topics: List[str] = field(default_factory=list)
     original_configuration: Dict[str, Any] = field(default_factory=dict)
     optimized_configuration: Dict[str, Any] = field(default_factory=dict)
@@ -26,16 +34,10 @@ class ClientMessage:
     hostname: str = ""
     superstream_client_uid: str = ""
     most_impactful_topic: str = ""
-    language: str = "Python"
+    language: str = ""
     error: str = ""
 
 @dataclass
 class ClientStatsMessage(ClientMessage):
     """Message for client statistics."""
     message_type: str = "client_stats"
-
-@dataclass
-class MetadataMessage:
-    """Message for metadata communication."""
-    topics_configuration: List[TopicConfiguration]
-    report_interval_ms: Optional[int] = None 

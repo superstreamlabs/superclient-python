@@ -2,52 +2,126 @@
 
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
 
-from ..logger import get_logger
+from ..util.logger import get_logger
+from ..util.config import copy_client_configuration_properties
 
 logger = get_logger("agent.metadata")
 
 _DEFAULTS = {"compression.type": "zstd", "batch.size": 16_384, "linger.ms": 5_000}
 
-def fetch_metadata(bootstrap: str, cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Fetch the latest optimization metadata from superstream.metadata_v1."""
+# ---------------------------------------------------------------------------
+# Library-specific consumer creation helpers (local to this module)
+# ---------------------------------------------------------------------------
+
+def _create_consumer_kafka_python(bootstrap: str, base_cfg: Dict[str, Any]):
+    import kafka  # type: ignore
+
+    consumer_cfg = {
+        "bootstrap_servers": bootstrap,
+        "client_id": "superstreamlib-metadata-consumer",
+        "enable_auto_commit": False,
+        "auto_offset_reset": "earliest",
+    }
+    copy_client_configuration_properties(base_cfg, consumer_cfg)
+    return kafka.KafkaConsumer(**consumer_cfg)
+
+def _create_consumer_aiokafka(bootstrap: str, base_cfg: Dict[str, Any]):
+    from aiokafka import AIOKafkaConsumer  # type: ignore
+
+    consumer_cfg = {
+        "bootstrap_servers": bootstrap,
+        "client_id": "superstreamlib-metadata-consumer",
+        "enable_auto_commit": False,
+        "auto_offset_reset": "earliest",
+    }
+    copy_client_configuration_properties(base_cfg, consumer_cfg)
+    return AIOKafkaConsumer(**consumer_cfg)
+
+def _create_consumer_confluent(bootstrap: str, base_cfg: Dict[str, Any]):
+    from confluent_kafka import Consumer  # type: ignore
+
+    consumer_cfg = {
+        "bootstrap.servers": bootstrap,
+        "client.id": "superstreamlib-metadata-consumer",
+        "enable.auto.commit": False,
+        "auto.offset.reset": "earliest",
+    }
+    copy_client_configuration_properties(base_cfg, consumer_cfg)
+    return Consumer(consumer_cfg)
+
+_CONSUMER_BUILDERS = {
+    "kafka-python": _create_consumer_kafka_python,
+    "aiokafka": _create_consumer_aiokafka,
+    "confluent": _create_consumer_confluent,
+}
+
+def fetch_metadata(
+    bootstrap: str,
+    cfg: Dict[str, Any],
+    lib_name: Literal["kafka-python", "aiokafka", "confluent"],
+) -> Optional[Dict[str, Any]]:
+    """Fetch the latest optimization metadata from the Superstream internal topic.
+
+    The consumer is created using the *same* Kafka library that the application
+    itself employs (`lib_name`).  This guarantees compatibility with user
+    dependencies and avoids version-related conflicts.
+    """
+
+    builder = _CONSUMER_BUILDERS.get(lib_name)
+    if builder is None:
+        logger.error("[ERR-204] Unsupported Kafka library: {}", lib_name)
+        return None
+
     topic = "superstream.metadata_v1"
     try:
-        import kafka  # type: ignore
+        consumer = builder(bootstrap, cfg)
 
-        consumer_cfg = {
-            "bootstrap_servers": bootstrap,
-            "client_id": "superstreamlib-metadata-consumer",
-            "group_id": None,
-            "enable_auto_commit": False,
-            "auto_offset_reset": "latest",
-        }
-        from .clients import copy_security
-        copy_security(cfg, consumer_cfg)
-        c = kafka.KafkaConsumer(**consumer_cfg)
-        if not c.partitions_for_topic(topic):
+        if not consumer.partitions_for_topic(topic):
             logger.error(
                 "[ERR-201] Superstream internal topic is missing. Please ensure permissions for superstream.* topics."
             )
-            c.close()
+            consumer.close()
             return None
-        tp = kafka.TopicPartition(topic, 0)
-        c.assign([tp])
-        c.seek_to_end(tp)
-        end = c.position(tp)
-        if end == 0:
-            logger.error(
-                "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
-            )
-            c.close()
-            return None
-        c.seek(tp, end - 1)
-        recs = c.poll(timeout_ms=5000)
-        c.close()
-        for batch in recs.values():
-            for rec in batch:
-                return json.loads(rec.value.decode())
+
+        if lib_name == "confluent":
+            from confluent_kafka import TopicPartition  # type: ignore
+
+            tp = TopicPartition(topic, 0)
+            consumer.assign([tp])
+            low, high = consumer.get_watermark_offsets(tp, timeout=5.0)
+            if high == 0:
+                logger.error(
+                    "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
+                )
+                consumer.close()
+                return None
+            consumer.seek(TopicPartition(topic, 0, high - 1))
+            msg = consumer.poll(timeout=5.0)
+            consumer.close()
+            if msg and msg.value():
+                return json.loads(msg.value().decode())
+
+        else:  # kafka-python / aiokafka share similar API
+            import kafka as _kafka  # type: ignore
+
+            tp = _kafka.TopicPartition(topic, 0)
+            consumer.assign([tp])
+            consumer.seek_to_end(tp)
+            end = consumer.position(tp)
+            if end == 0:
+                logger.error(
+                    "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
+                )
+                consumer.close()
+                return None
+            consumer.seek(tp, end - 1)
+            recs = consumer.poll(timeout_ms=5000)
+            consumer.close()
+            for batch in recs.values():
+                for rec in batch:
+                    return json.loads(rec.value.decode())
     except Exception as exc:
         logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
     return None

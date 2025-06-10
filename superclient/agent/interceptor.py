@@ -3,9 +3,9 @@
 import os
 from typing import Any, Dict
 
-from ..logger import get_logger
+from ..util.logger import get_logger
 from ..util.config import get_topics_list, is_disabled
-from ..core.manager import fetch_metadata, optimal_cfg
+from .metadata import fetch_metadata, optimal_cfg
 from ..core.reporter import send_clients_msg
 from .tracker import ProducerTracker, Heartbeat
 
@@ -30,12 +30,17 @@ def patch_kafka_python(mod):
         bootstrap = orig_cfg.get("bootstrap_servers") or (args[0] if args else None)
         if not bootstrap:
             return orig_init(self, *args, **kwargs)
+        bootstrap = normalize_bootstrap(bootstrap)
         client_id = orig_cfg.get("client_id", "")
         if client_id.startswith(_SUPERLIB_PREFIX):
             return orig_init(self, *args, **kwargs)
         topics_env = get_topics_list()
-        metadata = fetch_metadata(bootstrap, orig_cfg)
-        opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg)
+        metadata = fetch_metadata(bootstrap, orig_cfg, "kafka-python")
+        error_msg = ""
+        if metadata and not metadata.active:
+            error_msg = "[ERR-301] Superstream optimization is not active for this kafka cluster, please head to the Superstream console and activate it."
+            logger.error(error_msg)
+        opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg) if metadata and metadata.active else {}
         for k, v in opt_cfg.items():
             snake = k.replace(".", "_")
             if kwargs.get(snake) != v:
@@ -64,13 +69,15 @@ def patch_kafka_python(mod):
             orig_close = self.close
 
             def close_patch(inner, *a, **kw):
-                tr.close()
-                Heartbeat.unregister_tracker(tr.uuid)
+                if not hasattr(self, "_superstream_closed"):
+                    self._superstream_closed = True
+                    tr.close()
+                    Heartbeat.unregister_tracker(tr.uuid)
                 return orig_close(*a, **kw)
 
             self.close = close_patch
             self._superstream_patch = True
-        send_clients_msg(tr)
+        send_clients_msg(tr, error_msg)
         logger.info("Successfully optimized producer configuration for {}", client_id)
 
     Producer.__init__ = init_patch
@@ -92,12 +99,17 @@ def patch_aiokafka(mod):
             bootstrap = args[0]
         if not bootstrap:
             return orig_init(self, *args, **kwargs)
+        bootstrap = normalize_bootstrap(bootstrap)
         client_id = orig_cfg.get("client_id", "")
         if client_id.startswith(_SUPERLIB_PREFIX):
             return orig_init(self, *args, **kwargs)
         topics_env = get_topics_list()
-        metadata = fetch_metadata(bootstrap, orig_cfg)
-        opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg)
+        metadata = fetch_metadata(bootstrap, orig_cfg, "aiokafka")
+        error_msg = ""
+        if metadata and not metadata.active:
+            error_msg = "[ERR-301] Superstream optimization is not active for this kafka cluster, please head to the Superstream console and activate it."
+            logger.error(error_msg)
+        opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg) if metadata and metadata.active else {}
         for k, v in opt_cfg.items():
             if kwargs.get(k) != v:
                 logger.debug("Overriding configuration: {} -> {}", k, v)
@@ -125,13 +137,15 @@ def patch_aiokafka(mod):
             original_stop = self.stop
 
             async def stop_patch(inner, *a, **kw):
+                if not hasattr(self, "_superstream_closed"):
+                    self._superstream_closed = True
+                    tr.close()
+                    Heartbeat.unregister_tracker(tr.uuid)
                 await original_stop(*a, **kw)
-                tr.close()
-                Heartbeat.unregister_tracker(tr.uuid)
 
             self.stop = stop_patch
             self._superstream_patch = True
-        send_clients_msg(tr)
+        send_clients_msg(tr, error_msg)
         logger.info("Successfully optimized producer configuration for {}", client_id)
 
     Producer.__init__ = init_patch
@@ -149,12 +163,19 @@ def patch_confluent(mod):
             return orig_init(self, conf, *args, **kwargs)
         conf = dict(conf)
         bootstrap = conf.get("bootstrap.servers")
+        if not bootstrap:
+            return orig_init(self, conf, *args, **kwargs)
+        bootstrap = normalize_bootstrap(bootstrap)
         client_id = conf.get("client.id", "")
         if client_id.startswith(_SUPERLIB_PREFIX):
             return orig_init(self, conf, *args, **kwargs)
         topics_env = get_topics_list()
-        metadata = fetch_metadata(bootstrap, conf)
-        opt_cfg = optimal_cfg(metadata, topics_env, conf)
+        metadata = fetch_metadata(bootstrap, conf, "confluent")
+        error_msg = ""
+        if metadata and not metadata.active:
+            error_msg = "[ERR-301] Superstream optimization is not active for this kafka cluster, please head to the Superstream console and activate it."
+            logger.error(error_msg)
+        opt_cfg = optimal_cfg(metadata, topics_env, conf) if metadata and metadata.active else {}
         for k, v in opt_cfg.items():
             if conf.get(k) != v:
                 logger.debug("Overriding configuration: {} -> {}", k, v)
@@ -179,25 +200,18 @@ def patch_confluent(mod):
                 return original_produce(topic, *a, **kw)
 
             self.produce = produce_patch
-            orig_flush = self.flush
+            orig_close = self.close
 
-            def flush_patch(inner, *a, **kw):
-                tr.close()
-                Heartbeat.unregister_tracker(tr.uuid)
-                return orig_flush(*a, **kw)
-
-            self.flush = flush_patch
-            if hasattr(self, "close"):
-                orig_close = self.close
-
-                def close_patch(inner, *a, **kw):
+            def close_patch(inner, *a, **kw):
+                if not hasattr(self, "_superstream_closed"):
+                    self._superstream_closed = True
                     tr.close()
                     Heartbeat.unregister_tracker(tr.uuid)
-                    return orig_close(*a, **kw)
+                return orig_close(*a, **kw)
 
-                self.close = close_patch
+            self.close = close_patch
             self._superstream_patch = True
-        send_clients_msg(tr)
+        send_clients_msg(tr, error_msg)
         logger.info("Successfully optimized producer configuration for {}", client_id)
 
     Producer.__init__ = init_patch 

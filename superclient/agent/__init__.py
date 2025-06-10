@@ -5,7 +5,7 @@ import os
 import sys
 from typing import Any, Dict, Optional, Tuple
 
-from ..logger import get_logger, set_debug_enabled
+from ..util.logger import get_logger, set_debug_enabled
 from ..util.config import get_env_vars, is_disabled
 from ..util.network import get_host_info
 from .interceptor import patch_kafka_python, patch_aiokafka, patch_confluent
@@ -24,7 +24,7 @@ logger.info("Superstream Agent initialized with environment variables: {}", _ENV
 if is_disabled():
     logger.warn("Superstream functionality disabled via SUPERSTREAM_DISABLED")
 
-_VERSION = "1.0.0"
+# Preserve reference to built-in import function
 _original_import = builtins.__import__
 
 # ---------------------------------------------------------------------------
