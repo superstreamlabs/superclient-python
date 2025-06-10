@@ -46,26 +46,20 @@ pipeline {
                     env.versionTag = version
                     echo "Using version from version-beta.conf: ${env.versionTag}"               
                 }
-                // sh """
-                //   sed -i -r "s/superclient/superclient-beta/g" pyproject.toml
-                // """ 
                 sh "sed -i \'s/version = \"[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\"/version = \"${env.versionTag}\"/g\' pyproject.toml"
-                // sh """  
-                //     C_INCLUDE_PATH=/usr/include/librdkafka LIBRARY_PATH=/usr/include/librdkafka /tmp/.local/bin/pdm build
-                // """
                 sh '''
                     pip install toml
 
                     cat <<EOF > update_name.py
-        import toml
-        data = toml.load('pyproject.toml')
-        data['project']['name'] = 'superclient-beta'
-        with open('pyproject.toml', 'w') as f:
-            toml.dump(data, f)
-        EOF
+                import toml
+                data = toml.load('pyproject.toml')
+                data['project']['name'] = 'superclient-beta'
+                with open('pyproject.toml', 'w') as f:
+                    toml.dump(data, f)
+                EOF
 
                     python3 update_name.py
-                '''                
+                '''        
                 sh 'pip install build'               
                 sh 'python -m build'
                 sh 'ls dist/'
