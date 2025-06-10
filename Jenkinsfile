@@ -41,7 +41,7 @@ pipeline {
             
         stage('Beta Release') {
             when {
-                branch 'staging'
+                branch 'master'
             }            
             steps {
                 sh '''
@@ -49,13 +49,13 @@ pipeline {
                 '''                
                 sh 'pip install --quiet build twine'
                 sh 'python -m build'
-                // withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
-                //     sh """
-                //         twine upload dist/* \
-                //         -u $USR \
-                //         -p $PSW
-                //     """                     
-                // }                                                  
+                withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
+                    sh """
+                        twine upload dist/* \
+                        -u $USR \
+                        -p $PSW
+                    """                     
+                }                                                  
             }
         }
         stage('Prod Release') {
