@@ -35,25 +35,16 @@ pipeline {
                 pip install requests
                 """
             }
-        }        
+        }   
         stage('Beta Release') {
-            // when {
-            //     branch '*-beta'
-            // }            
             steps {
                 script {
-                    def version = readFile('version-beta.conf').trim()
-                    env.versionTag = version
-                    echo "Using version from version-beta.conf: ${env.versionTag}"               
-                }
-                sh """
-                sed -i 's/version = "[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+"/version = "${env.versionTag}"/g' pyproject.toml
-                """
+                    sh '''
+                        # Install required Python packages
+                        pip install toml build
 
-                sh '''
-                pip install toml
-
-                cat <<EOF > update_name.py
+                        # Write Python code to a file (no indentation!)
+                        cat > update_name.py <<EOF
         import toml
         data = toml.load('pyproject.toml')
         data['project']['name'] = 'superclient-beta'
@@ -61,23 +52,61 @@ pipeline {
             toml.dump(data, f)
         EOF
 
-                python3 update_name.py
-                '''
+                        # Run the Python script to update pyproject.toml
+                        python3 update_name.py
 
-                sh 'pip install build'
-                sh 'python -m build'
-                sh 'ls dist/'
-                // withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
-                //         sh """
-                //             python3 patch/patch.py --src "dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl" --output "dist/" --prefix "superstream_confluent_kafka_beta-${env.versionTag}"
-                //         """
-                //         sh"""
-                //             rm dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl
-                //             /tmp/.local/bin/pdm publish --no-build --username $USR --password $PSW
-                //         """
-                // }                                                  
+                        # Build the package using PEP 517
+                        python -m build
+
+                        # Show artifacts
+                        ls -lh dist/
+                    '''
+                }
             }
         }
+            
+        // stage('Beta Release') {
+        //     // when {
+        //     //     branch '*-beta'
+        //     // }            
+        //     steps {
+        //         script {
+        //             def version = readFile('version-beta.conf').trim()
+        //             env.versionTag = version
+        //             echo "Using version from version-beta.conf: ${env.versionTag}"               
+        //         }
+        //         sh """
+        //         sed -i 's/version = "[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+"/version = "${env.versionTag}"/g' pyproject.toml
+        //         """
+
+        //         sh '''
+        //         pip install toml
+
+        //         cat <<EOF > update_name.py
+        // import toml
+        // data = toml.load('pyproject.toml')
+        // data['project']['name'] = 'superclient-beta'
+        // with open('pyproject.toml', 'w') as f:
+        //     toml.dump(data, f)
+        // EOF
+
+        //         python3 update_name.py
+        //         '''
+
+        //         sh 'pip install build'
+        //         sh 'python -m build'
+        //         sh 'ls dist/'
+        //         // withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
+        //         //         sh """
+        //         //             python3 patch/patch.py --src "dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl" --output "dist/" --prefix "superstream_confluent_kafka_beta-${env.versionTag}"
+        //         //         """
+        //         //         sh"""
+        //         //             rm dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl
+        //         //             /tmp/.local/bin/pdm publish --no-build --username $USR --password $PSW
+        //         //         """
+        //         // }                                                  
+        //     }
+        // }
         // stage('Prod Release') {
         //     when {
         //         branch '2.4.0'
