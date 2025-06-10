@@ -54,20 +54,22 @@ pipeline {
                 sh '''
                 sed -i -E 's/^(name *= *")superclient(")/\\1superclient-beta\\2/' pyproject.toml
                 '''                
-
-
-
                 sh 'pip install build'
                 sh 'python -m build'
                 sh 'ls dist/'
                 // withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
-                //         sh """
-                //             python3 patch/patch.py --src "dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl" --output "dist/" --prefix "superstream_confluent_kafka_beta-${env.versionTag}"
-                //         """
-                //         sh"""
-                //             rm dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl
-                //             /tmp/.local/bin/pdm publish --no-build --username $USR --password $PSW
-                //         """
+                //         // sh """
+                //         //     python3 patch/patch.py --src "dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl" --output "dist/" --prefix "superstream_confluent_kafka_beta-${env.versionTag}"
+                //         // """
+                //         // sh"""
+                //         //     rm dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl
+                //         //     /tmp/.local/bin/pdm publish --no-build --username $USR --password $PSW
+                //         // """
+                //     sh """
+                //         twine upload dist/* \
+                //         -u $USR \
+                //         -p $PSW
+                //     """                     
                 // }                                                  
             }
         }
