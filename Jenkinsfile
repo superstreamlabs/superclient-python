@@ -53,8 +53,9 @@ pipeline {
                 // sh """  
                 //     C_INCLUDE_PATH=/usr/include/librdkafka LIBRARY_PATH=/usr/include/librdkafka /tmp/.local/bin/pdm build
                 // """
+                sh 'pip install build'
                 sh 'python -m build'
-                sh "ls dist/"
+                sh 'ls dist/'
                 // withCredentials([usernamePassword(credentialsId: 'superstream-pypi', usernameVariable: 'USR', passwordVariable: 'PSW')]) {
                 //         sh """
                 //             python3 patch/patch.py --src "dist/superstream_confluent_kafka_beta-${env.versionTag}-cp311-cp311-linux_x86_64.whl" --output "dist/" --prefix "superstream_confluent_kafka_beta-${env.versionTag}"
