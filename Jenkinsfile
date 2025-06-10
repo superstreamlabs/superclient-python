@@ -46,10 +46,10 @@ pipeline {
                     env.versionTag = version
                     echo "Using version from version-beta.conf: ${env.versionTag}"               
                 }
-                sh """
-                  sed -i -r "s/superclient/superclient-beta/g" pyproject.toml
-                """ 
-                sh "sed -i \'s/version = \"[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\"/version = \"${env.versionTag}\"/g\' pyproject.toml"
+                // sh """
+                //   sed -i -r "s/superclient/superclient-beta/g" pyproject.toml
+                // """ 
+                // sh "sed -i \'s/version = \"[0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\"/version = \"${env.versionTag}\"/g\' pyproject.toml"
                 // sh """  
                 //     C_INCLUDE_PATH=/usr/include/librdkafka LIBRARY_PATH=/usr/include/librdkafka /tmp/.local/bin/pdm build
                 // """
