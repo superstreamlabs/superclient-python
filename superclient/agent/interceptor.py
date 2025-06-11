@@ -7,6 +7,7 @@ from ..util.logger import get_logger
 from ..util.config import get_topics_list, is_disabled
 from .metadata import fetch_metadata, optimal_cfg
 from ..core.reporter import send_clients_msg
+from ..core.manager import normalize_bootstrap
 from .tracker import ProducerTracker, Heartbeat
 
 logger = get_logger("agent.interceptor")
@@ -77,6 +78,7 @@ def patch_kafka_python(mod):
 
             self.close = close_patch
             self._superstream_patch = True
+        orig_init(self, *args, **kwargs)
         send_clients_msg(tr, error_msg)
         logger.info("Successfully optimized producer configuration for {}", client_id)
 
@@ -145,6 +147,7 @@ def patch_aiokafka(mod):
 
             self.stop = stop_patch
             self._superstream_patch = True
+        orig_init(self, *args, **kwargs)
         send_clients_msg(tr, error_msg)
         logger.info("Successfully optimized producer configuration for {}", client_id)
 

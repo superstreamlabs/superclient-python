@@ -71,6 +71,7 @@ class Heartbeat(threading.Thread):
     def register_tracker(cls, tracker: ProducerTracker):
         """Register a new producer tracker."""
         with cls._track_lock:
+            tracker.last_hb = time.time()  # Set initial timestamp to prevent immediate reporting
             cls._trackers[tracker.uuid] = tracker
 
     @classmethod
