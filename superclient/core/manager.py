@@ -17,7 +17,7 @@ from ..util.network import get_host_info
 
 logger = get_logger("core.manager")
 
-_DEFAULTS = {"compression.type": "zstd", "batch.size": 16_384, "linger.ms": 5_000}
+_DEFAULTS = {"compression.type": "zstd", "batch.size": 32_768, "linger.ms": 5_000}
 
 # Cache for metadata messages per cluster
 _METADATA_CACHE: Dict[str, MetadataMessage] = {}
@@ -200,10 +200,14 @@ def optimal_cfg(metadata: Optional[MetadataMessage], topics: list[str], orig: Di
     latency = is_latency_sensitive()
     cfg: Dict[str, Any]
     if not metadata or not metadata.topics_configuration:
+        logger.debug("No metadata or topics_configuration found; applying default configuration: %s", _DEFAULTS)
+        logger.warning("The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console")
         cfg = dict(_DEFAULTS)
     else:
         matches = [tc for tc in metadata.topics_configuration if tc.topic_name in topics]
         if not matches:
+            logger.debug("No matching topics found in metadata; applying default configuration: %s", _DEFAULTS)
+            logger.warning("The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console")
             cfg = dict(_DEFAULTS)
         else:
             best = max(matches, key=lambda tc: tc.potential_reduction_percentage * tc.daily_writes_bytes)

@@ -21,6 +21,7 @@ class ProducerTracker:
         orig_cfg: Dict[str, Any],
         opt_cfg: Dict[str, Any],
         report_interval_ms: int,
+        error: str = "",
     ) -> None:
         self.uuid = str(uuid.uuid4())
         self.library = lib
@@ -33,6 +34,7 @@ class ProducerTracker:
         self.report_interval_ms = report_interval_ms
         self.last_hb = 0.0
         self.active = True
+        self.error = error
 
     def record_topic(self, topic: str):
         """Record a topic that this producer writes to."""
@@ -93,6 +95,6 @@ class Heartbeat(threading.Thread):
                     continue
                 # Send heartbeat message
                 from ..core.reporter import send_clients_msg
-                send_clients_msg(tr)
+                send_clients_msg(tr, tr.error)
                 tr.last_hb = now
             time.sleep(1) 

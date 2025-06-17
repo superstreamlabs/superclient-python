@@ -7,7 +7,6 @@ from typing import Any, Dict, Optional, Tuple
 
 from ..util.logger import get_logger, set_debug_enabled
 from ..util.config import get_env_vars, is_disabled
-from ..util.network import get_host_info
 from .interceptor import patch_kafka_python, patch_aiokafka, patch_confluent
 from .tracker import Heartbeat
 
@@ -90,7 +89,7 @@ def initialize():
         
     # Install import hook
     if builtins.__import__ is not _import_hook:
-        builtins.__import__ = _import_hook  # type: ignore
+        builtins.__import__ = _import_hook
         
     # Patch any pre-imported modules
     for module in ("kafka", "aiokafka", "confluent_kafka"):

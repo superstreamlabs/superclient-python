@@ -9,7 +9,7 @@ from ..util.config import copy_client_configuration_properties
 
 logger = get_logger("agent.metadata")
 
-_DEFAULTS = {"compression.type": "zstd", "batch.size": 16_384, "linger.ms": 5_000}
+_DEFAULTS = {"compression.type": "zstd", "batch.size": 32_768, "linger.ms": 5_000}
 
 # ---------------------------------------------------------------------------
 # Library-specific consumer creation helpers (local to this module)
@@ -131,10 +131,14 @@ def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dic
     latency = os.getenv("SUPERSTREAM_LATENCY_SENSITIVE", "false").lower() == "true"
     cfg: Dict[str, Any]
     if not metadata or not metadata.get("topics_configuration"):
+        logger.debug("No metadata or topics_configuration found; applying default configuration: %s", _DEFAULTS)
+        logger.warning("The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console")
         cfg = dict(_DEFAULTS)
     else:
         matches = [tc for tc in metadata["topics_configuration"] if tc["topic_name"] in topics]
         if not matches:
+            logger.debug("No matching topics found in metadata; applying default configuration: %s", _DEFAULTS)
+            logger.warning("The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console")
             cfg = dict(_DEFAULTS)
         else:
             best = max(matches, key=lambda tc: tc["potential_reduction_percentage"] * tc["daily_writes_bytes"])
