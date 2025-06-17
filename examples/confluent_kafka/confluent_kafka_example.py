@@ -10,15 +10,17 @@ sys.path.append(examples_path)
 from json_generator import generate_random_json
 
 # Confluent Cloud connection config
-Confluent Cloud connection config
-BOOTSTRAP_SERVERS = ['your-cluster-name.region.aws.confluent.cloud:9092']
+BOOTSTRAP_SERVERS = 'your-cluster-name.region.aws.confluent.cloud:9092'
 SASL_USERNAME = 'your-confluent-api-key'
 SASL_PASSWORD = 'your-confluent-api-secret'
 
+BATCH_SIZE = 150
+LINGER_MS = 10
+
 PRODUCER_NAME_1 = 'confluent-kafka-producer-1'
 PRODUCER_NAME_2 = 'confluent-kafka-producer-2'
-TOPICS_1 = ['example-topic']
-TOPICS_2 = ['example-topic']
+TOPICS_1 = ['example-topic', 'test1']
+TOPICS_2 = ['example-topic', 'test2']
 
 def create_producer(client_id):
     """Create and configure Kafka producer for Confluent Cloud using SASL_SSL"""
@@ -29,8 +31,8 @@ def create_producer(client_id):
         'sasl.username': SASL_USERNAME,
         'sasl.password': SASL_PASSWORD,
         'client.id': client_id,
-        'linger.ms': 10,
-        'batch.num.messages': 1000
+        'linger.ms': LINGER_MS,
+        'batch.num.messages': BATCH_SIZE
     })
 
 def send_messages_to_topics(producer, topics, producer_name, num_messages=50):

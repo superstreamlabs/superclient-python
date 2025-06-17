@@ -7,9 +7,7 @@ import os
 
 
 examples_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
 sys.path.append(examples_path)
-
 from json_generator import generate_random_json
 
 
@@ -17,6 +15,8 @@ from json_generator import generate_random_json
 BOOTSTRAP_SERVERS = ['your-cluster-name.region.aws.confluent.cloud:9092']
 SASL_USERNAME = 'your-confluent-api-key'
 SASL_PASSWORD = 'your-confluent-api-secret'
+BATCH_SIZE = 150
+LINGER_MS = 10
 
 PRODUCER_NAME_1 = 'kafka-python-producer-1'
 PRODUCER_NAME_2 = 'kafka-python-producer-2'
@@ -33,8 +33,8 @@ def create_producer(client_id):
         sasl_plain_username=SASL_USERNAME,
         sasl_plain_password=SASL_PASSWORD,
         compression_type=None,
-        batch_size=150,
-        linger_ms=10,
+        batch_size=BATCH_SIZE,
+        linger_ms=LINGER_MS,
         value_serializer=lambda v: json.dumps(v).encode('utf-8'),
     )
 
