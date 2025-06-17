@@ -14,18 +14,14 @@ from json_generator import generate_random_json
 
 
 # Confluent Cloud connection config
-# BOOTSTRAP_SERVERS = ['your-cluster-name.region.aws.confluent.cloud:9092']
-# SASL_USERNAME = 'your-confluent-api-key'
-# SASL_PASSWORD = 'your-confluent-api-secret'
+BOOTSTRAP_SERVERS = ['your-cluster-name.region.aws.confluent.cloud:9092']
+SASL_USERNAME = 'your-confluent-api-key'
+SASL_PASSWORD = 'your-confluent-api-secret'
 
 PRODUCER_NAME_1 = 'kafka-python-producer-1'
 PRODUCER_NAME_2 = 'kafka-python-producer-2'
 TOPICS_1 = ['example-topic', 'test1']
 TOPICS_2 = ['example-topic', 'test2']
-
-BOOTSTRAP_SERVERS = ['pkc-7xoy1.eu-central-1.aws.confluent.cloud:9092']
-SASL_USERNAME = 'DQMG57UH2JKICKDK'
-SASL_PASSWORD = 'Ntt+6A5vNyunC/VontJnQsZ4Ydfs6XM1S6rcydV8BYbKTgXzcArfmj6jkcCvozgC'
 
 def create_producer(client_id):
     """Create and configure Kafka producer for Confluent Cloud using SASL_SSL"""
