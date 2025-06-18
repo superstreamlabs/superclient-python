@@ -15,9 +15,10 @@ from json_generator import generate_random_json
 BOOTSTRAP_SERVERS = ['your-cluster-name.region.aws.confluent.cloud:9092']
 SASL_USERNAME = 'your-confluent-api-key'
 SASL_PASSWORD = 'your-confluent-api-secret'
+
+# === Producer Config
 BATCH_SIZE = 150
 LINGER_MS = 10
-
 PRODUCER_NAME_1 = 'kafka-python-producer-1'
 PRODUCER_NAME_2 = 'kafka-python-producer-2'
 TOPICS_1 = ['example-topic', 'test1']
