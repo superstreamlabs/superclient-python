@@ -24,8 +24,10 @@ SASL_PASSWORD = 'your-confluent-api-secret'
 # === Producer Config
 PRODUCER_NAME_1 = 'aiokafka-confluent-producer-1'
 PRODUCER_NAME_2 = 'aiokafka-confluent-producer-2'
-TOPICS_1 = ['example-topic']
-TOPICS_2 = ['example-topic']
+TOPICS_1 = ['example-topic', 'test1']
+TOPICS_2 = ['example-topic', 'test2']
+BATCH_SIZE = 150
+LINGER_MS = 10
 
 
 async def create_producer(client_id):
@@ -44,6 +46,8 @@ async def create_producer(client_id):
         sasl_plain_password=SASL_PASSWORD,
         key_serializer=lambda k: k.encode("utf-8"),
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        linger_ms=LINGER_MS,
+        max_batch_size=BATCH_SIZE,
     )
     await producer.start()
     return producer
