@@ -21,9 +21,9 @@ from json_generator import generate_random_json
 BOOTSTRAP_SERVERS = ['your-service-name.aivencloud.com:PORT']
 
 # === SSL Certificate Files from Aiven ZIP ===
-SSL_CAFILE = "ca.pem"
-SSL_CERTFILE = "client.cert.pem"
-SSL_KEYFILE = "client.pk8.pem"
+SSL_CAFILE = "/path/to/ca.pem"               # Root CA file
+SSL_CERTFILE = "/path/to/client.cert.pem"    # Client public certificate
+SSL_KEYFILE = "/path/to/client.pk8.pem"      # Client private key
 
 # === Producer Config
 BATCH_SIZE = 150
