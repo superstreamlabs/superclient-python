@@ -16,12 +16,12 @@ examples_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(examples_path)
 from json_generator import generate_random_json
 
-# === Confluent Cloud Config
+# === Confluent Cloud Config ===
 BOOTSTRAP_SERVERS = 'your-cluster-name.region.aws.confluent.cloud:9092'
 SASL_USERNAME = 'your-confluent-api-key'
 SASL_PASSWORD = 'your-confluent-api-secret'
 
-# === Producer Config
+# === Producer Config ===
 PRODUCER_NAME_1 = 'aiokafka-confluent-producer-1'
 PRODUCER_NAME_2 = 'aiokafka-confluent-producer-2'
 TOPICS_1 = ['example-topic', 'test1']

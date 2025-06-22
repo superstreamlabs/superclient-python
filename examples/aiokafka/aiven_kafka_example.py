@@ -27,7 +27,7 @@ SSL_CERTFILE = "/path/to/client.cert.pem"    # Client public certificate
 SSL_KEYFILE = "/path/to/client.pk8.pem"      # Client private key
 
 
-# === Producer Config
+# === Producer Config ===
 PRODUCER_NAME_1 = 'aiokafka-producer-1'
 PRODUCER_NAME_2 = 'aiokafka-producer-2'
 TOPICS_1 = ['example-topic', 'test-1']

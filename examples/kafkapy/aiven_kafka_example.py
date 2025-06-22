@@ -25,7 +25,7 @@ SSL_CAFILE = "/path/to/ca.pem"               # Root CA file
 SSL_CERTFILE = "/path/to/client.cert.pem"    # Client public certificate
 SSL_KEYFILE = "/path/to/client.pk8.pem"      # Client private key
 
-# === Producer Config
+# === Producer Config ===
 BATCH_SIZE = 150
 LINGER_MS = 10
 PRODUCER_NAME_1 = 'kafka-python-producer-1'

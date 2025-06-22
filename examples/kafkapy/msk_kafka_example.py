@@ -23,7 +23,7 @@ BOOTSTRAP_SERVERS = [
     'b-2-public.your-msk-cluster.amazonaws.com:9198'
 ]
 
-# AWS IAM credentials (
+# === AWS IAM credentials ===
 os.environ["AWS_ACCESS_KEY_ID"] = "<YOUR_AWS_ACCESS_KEY_ID>"
 os.environ["AWS_SECRET_ACCESS_KEY"] = "<YOUR_AWS_SECRET_ACCESS_KEY>"
 
@@ -41,7 +41,7 @@ TOPICS_1 = ["example-topic"]
 TOPICS_2 = ["example-topic"]
 
 def create_producer(client_id: str) -> KafkaProducer:
-    logger.info(f"🔧 Creating KafkaProducer for client_id={client_id}")
+    logger.info(f"Creating KafkaProducer for client_id={client_id}")
     return KafkaProducer(
         bootstrap_servers=BOOTSTRAP_SERVERS,
         client_id=client_id,

@@ -9,12 +9,12 @@ sys.path.append(examples_path)
 
 from json_generator import generate_random_json
 
-# Confluent Cloud connection config
+# === Confluent Cloud connection config ===
 BOOTSTRAP_SERVERS = 'your-cluster-name.region.aws.confluent.cloud:9092'
 SASL_USERNAME = 'your-confluent-api-key'
 SASL_PASSWORD = 'your-confluent-api-secret'
 
-# === Producer Config
+# === Producer Config ===
 BATCH_SIZE = 150
 LINGER_MS = 10
 PRODUCER_NAME_1 = 'confluent-kafka-producer-1'
