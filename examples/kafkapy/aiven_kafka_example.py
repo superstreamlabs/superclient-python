@@ -75,7 +75,7 @@ def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
         time.sleep(0.01)
 
     producer.flush()
-    logger.info(f"\n{producer_name} Summary: {successful} successful, {failed} failed")
+    logger.info(f"{producer_name} Summary: {successful} successful, {failed} failed")
 
 def main():
     producer1 = producer2 = None

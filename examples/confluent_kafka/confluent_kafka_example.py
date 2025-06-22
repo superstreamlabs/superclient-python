@@ -2,7 +2,14 @@ import json
 import time
 import sys
 import os
+import logging
 from confluent_kafka import Producer
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
+)
+logger = logging.getLogger("confluent.producer")
 
 examples_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(examples_path)
@@ -24,6 +31,7 @@ TOPICS_2 = ['example-topic', 'test2']
 
 def create_producer(client_id):
     """Create and configure Kafka producer for Confluent Cloud using SASL_SSL"""
+    logger.info(f"Creating producer for {client_id}")
     return Producer({
         'bootstrap.servers': BOOTSTRAP_SERVERS,
         'security.protocol': 'SASL_SSL',
@@ -44,8 +52,9 @@ def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
         nonlocal failed
         if err is not None:
             failed += 1
-            print(f"Failed to send message to {msg.topic()}: {err}")
+            logger.error(f"Failed to send message to {msg.topic()}: {err}")
 
+    logger.info(f"Sending {num_messages} messages from {producer_name} to {topics}")
     for i in range(num_messages):
         try:
             message = generate_random_json(min_size_kb=1)
@@ -59,13 +68,13 @@ def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
             successful += 1
         except Exception as e:
             failed += 1
-            print(f"Failed to send message {i + 1}: {e}")
+            logger.error(f"Failed to send message {i + 1}: {e}")
 
         producer.poll(0)
         time.sleep(0.01)
 
     producer.flush()
-    print(f"\n{producer_name} Summary: {successful} successful, {failed} failed")
+    logger.info(f"{producer_name} Summary: {successful} successful, {failed} failed")
 
 def main():
     producer1 = producer2 = None
@@ -77,16 +86,16 @@ def main():
         send_messages_to_topics(producer2, TOPICS_2, PRODUCER_NAME_2)
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.exception(f"Producer error: {e}")
     finally:
         if producer1:
-            print("Producer 1 closed")
+            logger.info("Producer 1 closed")
         if producer2:
-            print("Producer 2 closed")
+            logger.info("Producer 2 closed")
 
-    print("Sleeping for 10 minutes...")
+    logger.info("Sleeping for 10 minutes...")
     time.sleep(600)
-    print("Sleep completed")
+    logger.info("Sleep completed")
 
 if __name__ == "__main__":
     main()

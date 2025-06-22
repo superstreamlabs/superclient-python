@@ -71,17 +71,20 @@ def create_producer(client_id, **aws_creds):
     return Producer(config)
 
 
-def delivery_report(err, msg):
-    """Callback triggered by produce() to report message delivery status."""
-    if err is not None:
-        log.error(f"Message delivery failed: {err}")
-    else:
-        log.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
-
-
 def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
     """Generates and sends messages using the provided producer instance."""
     log.info(f"Sending {num_messages} messages from logical producer '{producer_name}' to topics: {topics}")
+    successful = 0
+    failed = 0
+
+    def delivery_report(err, msg):
+        nonlocal successful, failed
+        if err is not None:
+            failed += 1
+            log.error(f"Message delivery failed: {err}")
+        else:
+            successful += 1
+            log.info(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
     
     for i in range(num_messages):
         try:
@@ -101,11 +104,14 @@ def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
             producer.poll(1) 
         except Exception as e:
             log.error(f"Failed to produce message #{i+1}: {e}")
+            failed += 1
     
     log.info("Flushing final messages...")
     remaining = producer.flush()
     if remaining > 0:
         log.info(f"Waited for {remaining} outstanding messages to be delivered.")
+    
+    log.info(f"--- '{producer_name}' Summary: {successful} delivered, {failed} failed ---")
 
 
 def main():
@@ -123,6 +129,10 @@ def main():
         log.exception(f"A critical error occurred: {e}")
     finally:
         if producer:
+            log.info("Flushing final messages before closing...")
+            remaining = producer.flush()
+            if remaining > 0:
+                log.info(f"Waited for {remaining} outstanding messages to be delivered.")
             log.info("Producer flush finished.")
 
 

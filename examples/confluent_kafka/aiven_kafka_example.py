@@ -29,8 +29,8 @@ BATCH_SIZE = 150
 LINGER_MS = 10
 PRODUCER_NAME_1 = 'confluent-kafka-producer-1'
 PRODUCER_NAME_2 = 'confluent-kafka-producer-2'
-TOPICS_1 = ['example-topic']
-TOPICS_2 = ['example-topic']
+TOPICS_1 = ['example-topic', 'test-1']
+TOPICS_2 = ['example-topic', 'test-2']
 
 def create_producer(client_id):
     """Create and configure Confluent Kafka producer for Aiven using SSL"""
@@ -78,7 +78,7 @@ def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
         time.sleep(0.01)
 
     producer.flush()
-    logger.info(f"\n{producer_name} Summary: {successful} successful, {failed} failed")
+    logger.info(f"{producer_name} Summary: {successful} successful, {failed} failed")
 
 def main():
     producer1 = producer2 = None
