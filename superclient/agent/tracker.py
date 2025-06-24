@@ -82,7 +82,7 @@ class Heartbeat(threading.Thread):
 
     def __init__(self):
         super().__init__(name="superstream-heartbeat", daemon=True)
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     @classmethod
     def ensure(cls):
@@ -107,7 +107,7 @@ class Heartbeat(threading.Thread):
 
     def run(self):
         """Main heartbeat loop."""
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             now = time.time()
             with self._track_lock:
                 trackers = list(self._trackers.values())
