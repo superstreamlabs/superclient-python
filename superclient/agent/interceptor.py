@@ -103,7 +103,7 @@ def patch_kafka_python(mod):
             if not hasattr(self, "_superstream_patch"):
                 original_send = self.send
 
-                def send_patch(inner, topic, *a, **kw):
+                def send_patch(topic, *a, **kw):
                     """Track topic usage when sending messages."""
                     tr.record_topic(topic)
                     return original_send(topic, *a, **kw)
@@ -111,7 +111,7 @@ def patch_kafka_python(mod):
                 self.send = send_patch
                 orig_close = self.close
 
-                def close_patch(inner, *a, **kw):
+                def close_patch(*a, **kw):
                     """Clean up Superstream resources when closing the producer."""
                     if not hasattr(self, "_superstream_closed"):
                         self._superstream_closed = True
@@ -211,14 +211,14 @@ def patch_aiokafka(mod):
             if not hasattr(self, "_superstream_patch"):
                 original_send = self.send
 
-                async def send_patch(inner, topic, *a, **kw):
+                async def send_patch(topic, *a, **kw):
                     tr.record_topic(topic)
                     return await original_send(topic, *a, **kw)
 
                 self.send = send_patch
                 original_stop = self.stop
 
-                async def stop_patch(inner, *a, **kw):
+                async def stop_patch(*a, **kw):
                     if not hasattr(self, "_superstream_closed"):
                         self._superstream_closed = True
                         tr.close()
@@ -310,14 +310,14 @@ def patch_confluent(mod):
             if not hasattr(self, "_superstream_patch"):
                 original_produce = self.produce
 
-                def produce_patch(inner, topic, *a, **kw):
+                def produce_patch(topic, *a, **kw):
                     tr.record_topic(topic)
                     return original_produce(topic, *a, **kw)
 
                 self.produce = produce_patch
                 orig_close = self.close
 
-                def close_patch(inner, *a, **kw):
+                def close_patch(*a, **kw):
                     if not hasattr(self, "_superstream_closed"):
                         self._superstream_closed = True
                         tr.close()

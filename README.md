@@ -5,7 +5,7 @@
 
 </div>
 
-# Superstream Client For Python
+# Superclient Python
 
 A Python library for automatically optimizing Kafka producer configurations based on topic-specific recommendations.
 
@@ -82,26 +82,35 @@ The Superstream library needs to modify your producer's configuration to apply o
 ### Step 1: Install Superclient
 
 ```bash
+# Step 1: Install the package
 pip install superclient
+
+# Step 2: One-time setup (enables automatic loading)
+python -m superclient install_pth
 ```
 
-### Step 2: Run
+That's it! Superclient will now automatically load and optimize all Kafka producers in your Python environment.
 
-The package ships with a `sitecustomize.py` entry-point, therefore Python imports the agent automatically before your application's code starts. This is the recommended and default way to use Superclient.
+## Usage
 
-#### Manual Initialization (Only if needed)
-
-If `sitecustomize` is disabled in your environment (e.g., when using `python -S` or when `PYTHONNOUSERSITE` is set), you can initialize manually by adding this import at the very beginning of your application's main entry point (e.g., `main.py`, `app.py`, or `__init__.py`):
+After installation, superclient works automatically. Just use your Kafka clients as usual:
 
 ```python
-import superclient  # side-effects automatically enable the agent
-
-# Your application code follows
+# kafka-python
 from kafka import KafkaProducer
-# ... rest of your imports and code
-```
+producer = KafkaProducer(bootstrap_servers='localhost:9092')
+# Automatically optimized!
 
-Note: The manual import must be placed before any Kafka-related imports to ensure proper interception of producer creation.
+# confluent-kafka
+from confluent_kafka import Producer
+producer = Producer({'bootstrap.servers': 'localhost:9092'})
+# Automatically optimized!
+
+# aiokafka
+from aiokafka import AIOKafkaProducer
+producer = AIOKafkaProducer(bootstrap_servers='localhost:9092')
+# Automatically optimized!
+```
 
 ### Docker Integration
 
@@ -112,6 +121,9 @@ FROM python:3.8-slim
 
 # Install superclient
 RUN pip install superclient
+
+# Run the one-time setup to enable automatic loading
+RUN python -m superclient install_pth
 
 # Your application code
 COPY . /app
@@ -137,17 +149,6 @@ export SUPERSTREAM_TOPICS_LIST=orders,payments,user-events
 export SUPERSTREAM_LATENCY_SENSITIVE=true
 ```
 
-### SUPERSTREAM_LATENCY_SENSITIVE Explained
-
-The linger.ms parameter follows these rules:
-
-1. If SUPERSTREAM_LATENCY_SENSITIVE is set to true:
-   - Linger value will never be modified, regardless of other settings
-
-2. If SUPERSTREAM_LATENCY_SENSITIVE is set to false or not set:
-   - If no explicit linger exists in original configuration: Use Superstream's optimized value
-   - If explicit linger exists: Use the maximum of original value and Superstream's optimized value
-
 ## Prerequisites
 
 - Python 3.8 or higher
@@ -156,4 +157,4 @@ The linger.ms parameter follows these rules:
 
 ## License
 
-This project is licensed under the Apache License 2.0. 
+Apache License 2.0 

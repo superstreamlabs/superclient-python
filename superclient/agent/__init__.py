@@ -34,11 +34,20 @@ def _patch_module(module_name: str) -> None:
     """Patch a specific module if it exists in sys.modules."""
     try:
         if module_name == "kafka" and "kafka" in sys.modules:
-            patch_kafka_python(sys.modules["kafka"])
+            # Check if KafkaProducer exists before patching
+            kafka_module = sys.modules["kafka"]
+            if hasattr(kafka_module, "KafkaProducer"):
+                patch_kafka_python(kafka_module)
         elif module_name == "aiokafka" and "aiokafka" in sys.modules:
-            patch_aiokafka(sys.modules["aiokafka"])
+            # Check if AIOKafkaProducer exists before patching
+            aiokafka_module = sys.modules["aiokafka"]
+            if hasattr(aiokafka_module, "AIOKafkaProducer"):
+                patch_aiokafka(aiokafka_module)
         elif module_name == "confluent_kafka" and "confluent_kafka" in sys.modules:
-            patch_confluent(sys.modules["confluent_kafka"])
+            # Check if Producer exists before patching
+            confluent_module = sys.modules["confluent_kafka"]
+            if hasattr(confluent_module, "Producer"):
+                patch_confluent(confluent_module)
     except Exception as exc:
         logger.error("[ERR-001] Failed to patch {}: {}", module_name, exc)
 
@@ -81,7 +90,7 @@ def initialize():
     
     This function:
     1. Installs the import hook to catch future imports
-    2. Patches any pre-imported modules
+    2. Schedules patching of any pre-imported modules
     3. Starts the heartbeat thread
     """
     if is_disabled():
@@ -91,9 +100,17 @@ def initialize():
     if builtins.__import__ is not _import_hook:
         builtins.__import__ = _import_hook
         
-    # Patch any pre-imported modules
-    for module in ("kafka", "aiokafka", "confluent_kafka"):
-        _patch_module(module)
+    # Schedule patching of pre-imported modules using a deferred approach
+    # This avoids circular import issues by running after the current import completes
+    import threading
+    def patch_preimported():
+        """Patch any modules that were imported before superclient"""
+        for module in ("kafka", "aiokafka", "confluent_kafka"):
+            if module in sys.modules:
+                _patch_module(module)
+    
+    # Use a timer with 0 delay to run after current import stack completes
+    threading.Timer(0, patch_preimported).start()
             
     # Start heartbeat
     Heartbeat.ensure() 
