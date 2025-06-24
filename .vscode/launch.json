@@ -5,7 +5,7 @@
             "name": "kafka-python: Apache",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/kafkapy/apache.py",
+            "module": "examples.kafkapy.apache",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -18,7 +18,7 @@
             "name": "kafka-python: Aiven",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/kafkapy/aiven.py",
+            "module": "examples.kafkapy.aiven",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -31,7 +31,7 @@
             "name": "kafka-python: Confluent",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/kafkapy/confluent.py",
+            "module": "examples.kafkapy.confluent",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -44,7 +44,7 @@
             "name": "kafka-python: MSK",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/kafkapy/msk.py",
+            "module": "examples.kafkapy.msk",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -57,7 +57,7 @@
             "name": "aiokafka: Apache",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/aiokafka/apache.py",
+            "module": "examples.aiokafka.apache",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -70,7 +70,7 @@
             "name": "aiokafka: Aiven",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/aiokafka/aiven.py",
+            "module": "examples.aiokafka.aiven",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -83,7 +83,7 @@
             "name": "aiokafka: Confluent",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/aiokafka/confluent.py",
+            "module": "examples.aiokafka.confluent",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -96,7 +96,7 @@
             "name": "aiokafka: MSK",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/aiokafka/msk.py",
+            "module": "examples.aiokafka.msk",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -109,7 +109,7 @@
             "name": "confluent-kafka: Apache",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/confluent_kafka/apache.py",
+            "module": "examples.confluent_kafka.apache",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -122,7 +122,7 @@
             "name": "confluent-kafka: Aiven",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/confluent_kafka/aiven.py",
+            "module": "examples.confluent_kafka.aiven",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -135,7 +135,7 @@
             "name": "confluent-kafka: Confluent",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/confluent_kafka/confluent.py",
+            "module": "examples.confluent_kafka.confluent",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
@@ -148,7 +148,7 @@
             "name": "confluent-kafka: MSK",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/examples/confluent_kafka/msk.py",
+            "module": "examples.confluent_kafka.msk",
             "console": "integratedTerminal",
             "env": {
                 "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
