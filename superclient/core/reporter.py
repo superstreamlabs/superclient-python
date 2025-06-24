@@ -6,10 +6,10 @@ import asyncio
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from ..util.logger import get_logger
-from ..model.messages import ClientMessage, ClientStatsMessage
+from ..model.messages import ClientMessage
 from ..util.config import (
     copy_client_configuration_properties,
-    convert_to_dot_syntax,
+    translate_lib_to_java,
     get_original_config,
     mask_sensitive,
 )
@@ -113,12 +113,14 @@ def send_clients_msg(tracker: Any, error: str = "") -> None:
     orig_cfg_dot = get_original_config(tracker.orig_cfg, tracker.library)
     orig_cfg_masked = {k: mask_sensitive(k, v) for k, v in orig_cfg_dot.items()}
 
-    opt_cfg_dot = convert_to_dot_syntax(tracker.opt_cfg, tracker.library)
+    opt_cfg_dot = translate_lib_to_java(tracker.opt_cfg, tracker.library)
     opt_cfg_masked = {k: mask_sensitive(k, v) for k, v in opt_cfg_dot.items()}
 
-    msg = ClientStatsMessage(
+    msg = ClientMessage(
         client_id=tracker.client_id,
         ip_address=ip,
+        type="producer",
+        message_type="client_stats",
         topics=sorted(tracker.topics),
         original_configuration=orig_cfg_masked,
         optimized_configuration=opt_cfg_masked,
@@ -126,6 +128,7 @@ def send_clients_msg(tracker: Any, error: str = "") -> None:
         hostname=hostname,
         superstream_client_uid=tracker.uuid,
         most_impactful_topic=tracker.determine_topic(),
+        language=f"Python ({tracker.library})",
         error=error,
     )
     payload = json.dumps(msg.__dict__).encode()

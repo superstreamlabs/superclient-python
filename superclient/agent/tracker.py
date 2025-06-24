@@ -22,6 +22,8 @@ class ProducerTracker:
         opt_cfg: Dict[str, Any],
         report_interval_ms: int,
         error: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
+        topics_env: Optional[list[str]] = None,
     ) -> None:
         self.uuid = str(uuid.uuid4())
         self.library = lib
@@ -35,6 +37,8 @@ class ProducerTracker:
         self.last_hb = 0.0
         self.active = True
         self.error = error
+        self.metadata = metadata
+        self.topics_env = topics_env or []
 
     def record_topic(self, topic: str):
         """Record a topic that this producer writes to."""
@@ -45,8 +49,27 @@ class ProducerTracker:
         self.active = False
 
     def determine_topic(self) -> str:
-        """Get the most impactful topic for this producer."""
-        return sorted(self.topics)[0] if self.topics else ""
+        """Get the most impactful topic for this producer based on metadata analysis."""
+        if not self.metadata or not self.metadata.get("topics_configuration"):
+            # Fallback to first topic if no metadata available
+            logger.warning("No metadata available for producer {}, falling back to first used topic", self.client_id)
+            return sorted(self.topics)[0] if self.topics else ""
+        
+        # Find matching topic configurations from metadata based on environment topics only
+        matches = [
+            tc for tc in self.metadata["topics_configuration"] 
+            if tc["topic_name"] in self.topics_env
+        ]
+        
+        if not matches:
+            # Fallback to first environment topic if no matches
+            logger.warning("No matching topics found in metadata for producer {} (env topics: {}), falling back to first environment topic", 
+                          self.client_id, self.topics_env)
+            return sorted(self.topics_env)[0] if self.topics_env else ""
+        
+        # Use the same logic as optimal_cfg: find the topic with highest impact
+        best = max(matches, key=lambda tc: tc["potential_reduction_percentage"] * tc["daily_writes_bytes"])
+        return best["topic_name"]
 
 
 class Heartbeat(threading.Thread):

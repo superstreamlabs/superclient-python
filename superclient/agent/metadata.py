@@ -5,7 +5,7 @@ import os
 from typing import Any, Dict, Optional, Literal
 
 from ..util.logger import get_logger
-from ..util.config import copy_client_configuration_properties
+from ..util.config import copy_client_configuration_properties, translate_java_to_lib
 
 logger = get_logger("agent.metadata")
 
@@ -126,7 +126,7 @@ def fetch_metadata(
         logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
     return None
 
-def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dict[str, Any]) -> Dict[str, Any]:
+def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dict[str, Any], lib_name: str) -> Dict[str, Any]:
     """Compute optimal configuration based on metadata and topics."""
     latency = os.getenv("SUPERSTREAM_LATENCY_SENSITIVE", "false").lower() == "true"
     cfg: Dict[str, Any]
@@ -154,4 +154,6 @@ def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dic
                     cfg[p] = orig[p]
             except Exception:
                 pass
-    return cfg 
+    
+    # Translate Java-style keys to library-specific keys
+    return translate_java_to_lib(cfg, lib_name) 

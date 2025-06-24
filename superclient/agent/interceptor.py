@@ -69,7 +69,7 @@ def patch_kafka_python(mod):
                 opt_cfg = {}
             else:
                 # Get optimized configuration if Superstream is active
-                opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg)
+                opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg, "kafka-python")
             
             # Apply optimized configuration
             for k, v in opt_cfg.items():
@@ -91,6 +91,8 @@ def patch_kafka_python(mod):
                 opt_cfg=opt_cfg,
                 report_interval_ms=int(report_interval or _DEFAULT_REPORT_INTERVAL_MS),
                 error=error_msg,  # Store error message in tracker
+                metadata=metadata,
+                topics_env=topics_env,
             )
             Heartbeat.register_tracker(tr)
 
@@ -186,7 +188,7 @@ def patch_aiokafka(mod):
                 opt_cfg = {}
             else:
                 # Get optimized configuration if Superstream is active
-                opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg)
+                opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg, "aiokafka")
             for k, v in opt_cfg.items():
                 if kwargs.get(k) != v:
                     logger.debug("Overriding configuration: {} -> {}", k, v)
@@ -201,6 +203,8 @@ def patch_aiokafka(mod):
                 opt_cfg=opt_cfg,
                 report_interval_ms=int(report_interval or _DEFAULT_REPORT_INTERVAL_MS),
                 error=error_msg,  # Store error message in tracker
+                metadata=metadata,
+                topics_env=topics_env,
             )
             Heartbeat.register_tracker(tr)
             orig_init(self, *args, **kwargs)
@@ -283,7 +287,7 @@ def patch_confluent(mod):
                 opt_cfg = {}
             else:
                 # Get optimized configuration if Superstream is active
-                opt_cfg = optimal_cfg(metadata, topics_env, conf)
+                opt_cfg = optimal_cfg(metadata, topics_env, conf, "confluent")
             for k, v in opt_cfg.items():
                 if conf.get(k) != v:
                     logger.debug("Overriding configuration: {} -> {}", k, v)
@@ -298,6 +302,8 @@ def patch_confluent(mod):
                 opt_cfg=opt_cfg,
                 report_interval_ms=int(report_interval or _DEFAULT_REPORT_INTERVAL_MS),
                 error=error_msg,  # Store error message in tracker
+                metadata=metadata,
+                topics_env=topics_env,
             )
             Heartbeat.register_tracker(tr)
             orig_init(self, conf, *args, **kwargs)

@@ -1,19 +1,12 @@
 """Core manager for Superstream functionality."""
 
-import json
 import threading
-import time
 import asyncio
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Optional
 
 from ..util.logger import get_logger
-from ..model.messages import MetadataMessage, TopicConfiguration
-from ..util.config import (
-    copy_client_configuration_properties,
-    convert_to_dot_syntax,
-    get_original_config,
-)
-from ..util.network import get_host_info
+from ..model.messages import MetadataMessage
+from ..util.config import copy_client_configuration_properties
 
 logger = get_logger("core.manager")
 
