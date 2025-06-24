@@ -2,12 +2,160 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Main",
+            "name": "kafka-python: Apache",
             "type": "debugpy",
             "request": "launch",
-            "program": "main.py",
+            "program": "${workspaceFolder}/examples/kafkapy/apache.py",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "kafka-python: Aiven",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/kafkapy/aiven.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "kafka-python: Confluent",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/kafkapy/confluent.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "kafka-python: MSK",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/kafkapy/msk.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "aiokafka: Apache",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/aiokafka/apache.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "aiokafka: Aiven",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/aiokafka/aiven.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "aiokafka: Confluent",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/aiokafka/confluent.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "aiokafka: MSK",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/aiokafka/msk.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "confluent-kafka: Apache",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/confluent_kafka/apache.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "confluent-kafka: Aiven",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/confluent_kafka/aiven.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "confluent-kafka: Confluent",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/confluent_kafka/confluent.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
+        },
+        {
+            "name": "confluent-kafka: MSK",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/examples/confluent_kafka/msk.py",
+            "console": "integratedTerminal",
+            "env": {
+                "SUPERSTREAM_TOPICS_LIST": "test-topic,test-topic-1,test-topic-2,test-topic-3",
+                "SUPERSTREAM_LATENCY_SENSITIVE": "false",
+                "SUPERSTREAM_DISABLED": "false",
+                "SUPERSTREAM_DEBUG": "true"
+            }
         }
     ]
 }
