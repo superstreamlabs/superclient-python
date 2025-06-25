@@ -21,23 +21,14 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ### Step 3: Install in Development Mode
 
 ```bash
-pip install -e .
+pip install -e . && python -m superclient install_pth
 ```
 
-This installs the package in "editable" mode, which means:
+This installs the package in "editable" mode and enables automatic loading, which means:
 - Changes to the source code are immediately reflected without reinstalling
 - The package is installed in your Python environment
 - You can import and use the package normally
-
-### Step 4: Enable Automatic Loading
-
-To test the automatic loading functionality:
-
-```bash
-python -m superclient install_pth
-```
-
-This installs the `.pth` file that enables automatic loading when Python starts.
+- The `.pth` file is installed to enable automatic loading when Python starts
 
 ## Development Workflow
 
@@ -50,26 +41,12 @@ This installs the `.pth` file that enables automatic loading when Python starts.
 
 ## Uninstallation
 
-### Step 1: Remove the .pth File (if installed)
-
 ```bash
-# Find and remove the .pth file
-find venv/lib/python*/site-packages -name "superclient-init.pth" -delete
+pip uninstall superclient && find venv/lib/python*/site-packages -name "superclient-init.pth" -delete && rm -rf build/ dist/ superclient.egg-info/ && find . -name "*.pyc" -delete && find . -name "__pycache__" -type d -exec rm -rf {} +
 ```
 
-### Step 2: Uninstall the Package
-
-```bash
-pip uninstall superclient
-```
-
-### Step 3: Clean Up Build Artifacts
-
-```bash
-# Remove build directories
-rm -rf build/ dist/ superclient.egg-info/
-
-# Remove any cached Python files
-find . -name "*.pyc" -delete
-find . -name "__pycache__" -type d -exec rm -rf {} +
-```
+This single command:
+1. Uninstalls the superclient package
+2. Removes the .pth file
+3. Cleans up build artifacts
+4. Removes cached Python files

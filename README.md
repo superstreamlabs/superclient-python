@@ -79,14 +79,8 @@ The Superstream library needs to modify your producer's configuration to apply o
 
 ## Installation
 
-### Step 1: Install Superclient
-
 ```bash
-# Step 1: Install the package
-pip install superclient
-
-# Step 2: One-time setup (enables automatic loading)
-python -m superclient install_pth
+pip install superclient && python -m superclient install_pth
 ```
 
 That's it! Superclient will now automatically load and optimize all Kafka producers in your Python environment.
@@ -121,8 +115,6 @@ FROM python:3.8-slim
 
 # Install superclient
 RUN pip install superclient
-
-# Run the one-time setup to enable automatic loading
 RUN python -m superclient install_pth
 
 # Your application code
