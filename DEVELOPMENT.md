@@ -47,18 +47,6 @@ This installs the `.pth` file that enables automatic loading when Python starts.
 2. Changes are immediately available (no reinstallation needed)
 3. Test your changes by running examples or your own code
 
-### Running Examples
-
-```bash
-# Run a kafka-python example
-python examples/kafkapy/apache.py
-
-# Run an aiokafka example  
-python examples/aiokafka/apache.py
-
-# Run a confluent-kafka example
-python examples/confluent_kafka/apache.py
-```
 
 ## Uninstallation
 
@@ -66,10 +54,8 @@ python examples/confluent_kafka/apache.py
 
 ```bash
 # Find and remove the .pth file
-find /path/to/your/venv/lib/python*/site-packages -name "superclient-init.pth" -delete
+find venv/lib/python*/site-packages -name "superclient-init.pth" -delete
 ```
-
-Or manually remove it from your site-packages directory.
 
 ### Step 2: Uninstall the Package
 
