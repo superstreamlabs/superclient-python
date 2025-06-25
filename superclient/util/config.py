@@ -4,6 +4,10 @@ import os
 import socket
 from typing import Any, Dict, List
 
+from .logger import get_logger
+
+logger = get_logger("util.config")
+
 def get_env_vars() -> Dict[str, str]:
     """Get Superstream environment variables."""
     return {k: v for k, v in os.environ.items() if k.startswith("SUPERSTREAM_")}
@@ -419,4 +423,4 @@ def get_original_config(orig_cfg: Dict[str, Any], lib_name: str) -> Dict[str, An
         if k not in user_keys_java:
             merged[k] = v
             
-    return merged 
+    return merged
