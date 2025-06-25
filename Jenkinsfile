@@ -45,7 +45,7 @@ pipeline {
             }            
             steps {
                 sh '''
-                sed -i -E 's/^(name *= *")superclient(")/\\1superclient-beta\\2/' pyproject.toml
+                sed -i -E 's/^(name *= *")superstream-clients(")/\\1superstream-clients-beta\\2/' pyproject.toml
                 '''                
                 sh 'pip install --quiet build twine'
                 sh 'python -m build'
