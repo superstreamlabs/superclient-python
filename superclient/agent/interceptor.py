@@ -62,7 +62,7 @@ def patch_kafka_python(mod):
                 error_msg = "[ERR-304] Failed to fetch metadata for producer with client id {}: Unable to connect to Superstream service".format(client_id)
                 # Skip optimization but keep stats reporting
                 opt_cfg = {}
-            elif not metadata.active:
+            elif not metadata.get("active", True):
                 error_msg = "[ERR-301] Superstream optimization is not active for this kafka cluster, please head to the Superstream console and activate it."
                 logger.error(error_msg)
                 # Skip optimization but keep stats reporting
@@ -73,13 +73,12 @@ def patch_kafka_python(mod):
             
             # Apply optimized configuration
             for k, v in opt_cfg.items():
-                snake = k.replace(".", "_")
-                if kwargs.get(snake) != v:
-                    logger.debug("Overriding configuration: {} -> {}", snake, v)
-                    kwargs[snake] = v
+                if kwargs.get(k) != v:
+                    logger.debug("Overriding configuration: {} -> {}", k, v)
+                    kwargs[k] = v
 
             # Set up reporting interval
-            report_interval = metadata.report_interval_ms if metadata else _DEFAULT_REPORT_INTERVAL_MS
+            report_interval = metadata.get("report_interval_ms") if metadata else _DEFAULT_REPORT_INTERVAL_MS
             
             # Create and register producer tracker
             tr = ProducerTracker(
@@ -181,7 +180,7 @@ def patch_aiokafka(mod):
                 logger.error(error_msg)
                 # Skip optimization but keep stats reporting
                 opt_cfg = {}
-            elif not metadata.active:
+            elif not metadata.get("active", True):
                 error_msg = "[ERR-301] Superstream optimization is not active for this kafka cluster, please head to the Superstream console and activate it."
                 logger.error(error_msg)
                 # Skip optimization but keep stats reporting
@@ -193,7 +192,7 @@ def patch_aiokafka(mod):
                 if kwargs.get(k) != v:
                     logger.debug("Overriding configuration: {} -> {}", k, v)
                     kwargs[k] = v
-            report_interval = metadata.report_interval_ms if metadata else _DEFAULT_REPORT_INTERVAL_MS
+            report_interval = metadata.get("report_interval_ms") if metadata else _DEFAULT_REPORT_INTERVAL_MS
             tr = ProducerTracker(
                 lib="aiokafka",
                 producer=self,
@@ -280,7 +279,7 @@ def patch_confluent(mod):
                 logger.error(error_msg)
                 # Skip optimization but keep stats reporting
                 opt_cfg = {}
-            elif not metadata.active:
+            elif not metadata.get("active", True):
                 error_msg = "[ERR-301] Superstream optimization is not active for this kafka cluster, please head to the Superstream console and activate it."
                 logger.error(error_msg)
                 # Skip optimization but keep stats reporting
@@ -292,7 +291,7 @@ def patch_confluent(mod):
                 if conf.get(k) != v:
                     logger.debug("Overriding configuration: {} -> {}", k, v)
                     conf[k] = v
-            report_interval = metadata.report_interval_ms if metadata else _DEFAULT_REPORT_INTERVAL_MS
+            report_interval = metadata.get("report_interval_ms") if metadata else _DEFAULT_REPORT_INTERVAL_MS
             tr = ProducerTracker(
                 lib="confluent",
                 producer=self,

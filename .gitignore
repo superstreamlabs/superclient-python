@@ -5,3 +5,4 @@ __pycache__/
 superclient.egg-info
 build/
 dist/
+superstream_clients.egg-info/

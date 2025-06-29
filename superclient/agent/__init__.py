@@ -19,9 +19,6 @@ if os.getenv("SUPERSTREAM_DEBUG", "false").lower() == "true":
     set_debug_enabled(True)
 
 logger = get_logger("agent")
-logger.info("Superstream Agent initialized with environment variables: {}", _ENV_VARS)
-if is_disabled():
-    logger.warn("Superstream functionality disabled via SUPERSTREAM_DISABLED")
 
 # Preserve reference to built-in import function
 _original_import = builtins.__import__
@@ -93,6 +90,12 @@ def initialize():
     2. Schedules patching of any pre-imported modules
     3. Starts the heartbeat thread
     """
+    
+    # Log initialization message
+    logger.info("Superstream Agent initialized with environment variables: {}", _ENV_VARS)
+    if is_disabled():
+        logger.warn("Superstream functionality disabled via SUPERSTREAM_DISABLED")
+    
     if is_disabled():
         return
         
