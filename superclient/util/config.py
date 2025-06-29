@@ -229,6 +229,7 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "enable.idempotence": "enable_idempotence",
         "security.protocol": "security_protocol",
         "sasl.mechanism": "sasl_mechanism",
+        "ssl.context": "ssl_context",
     },
     "confluent": {
         # Confluent uses Java-style names directly, so most mappings are 1:1

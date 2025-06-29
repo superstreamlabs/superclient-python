@@ -57,21 +57,15 @@ _CONSUMER_BUILDERS = {
     "confluent": _create_consumer_confluent,
 }
 
-async def fetch_metadata(
+def fetch_metadata_kafka_python(
     bootstrap: str,
     cfg: Dict[str, Any],
-    lib_name: Literal["kafka-python", "aiokafka", "confluent"],
 ) -> Optional[Dict[str, Any]]:
-    """Fetch the latest optimization metadata from the Superstream internal topic.
-
-    The consumer is created using the *same* Kafka library that the application
-    itself employs (`lib_name`).  This guarantees compatibility with user
-    dependencies and avoids version-related conflicts.
-    """
-
-    builder = _CONSUMER_BUILDERS.get(lib_name)
+    """Fetch metadata using kafka-python library."""
+    
+    builder = _CONSUMER_BUILDERS.get("kafka-python")
     if builder is None:
-        logger.error("[ERR-204] Unsupported Kafka library: {}", lib_name)
+        logger.error("[ERR-204] Unsupported Kafka library: kafka-python")
         return None
 
     topic = "superstream.metadata_v1"
@@ -85,74 +79,132 @@ async def fetch_metadata(
             consumer.close()
             return None
 
-        if lib_name == "confluent":
-            from confluent_kafka import TopicPartition  # type: ignore
+        import kafka as _kafka  # type: ignore
 
-            tp = TopicPartition(topic, 0)
-            consumer.assign([tp])
-            low, high = consumer.get_watermark_offsets(tp, timeout=5.0)
-            if high == 0:
-                logger.error(
-                    "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
-                )
-                consumer.close()
-                return None
-            consumer.seek(TopicPartition(topic, 0, high - 1))
-            msg = consumer.poll(timeout=5.0)
+        tp = _kafka.TopicPartition(topic, 0)
+        consumer.assign([tp])
+        
+        # Get the end offset safely
+        end_offsets = consumer.end_offsets([tp])
+        end = end_offsets.get(tp, 0)
+        
+        if end == 0:
+            logger.error(
+                "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
+            )
             consumer.close()
-            if msg and msg.value():
-                return json.loads(msg.value().decode())
-
-        elif lib_name == "kafka-python":
-            import kafka as _kafka  # type: ignore
-
-            tp = _kafka.TopicPartition(topic, 0)
-            consumer.assign([tp])
+            return None
             
-            # Get the end offset safely
-            end_offsets = consumer.end_offsets([tp])
-            end = end_offsets.get(tp, 0)
-            
-            if end == 0:
-                logger.error(
-                    "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
-                )
-                consumer.close()
-                return None
-                
-            consumer.seek(tp, end - 1)
-            recs = consumer.poll(timeout_ms=5000)
-            consumer.close()
-            for batch in recs.values():
-                for rec in batch:
-                    return json.loads(rec.value.decode())
-
-        elif lib_name == "aiokafka":
-            # aiokafka uses its own TopicPartition and async API
-            from aiokafka import TopicPartition  # type: ignore
-
-            tp = TopicPartition(topic, 0)
-            consumer.assign([tp])
-            
-            # Get the end offset safely using aiokafka's API
-            end_offsets = await consumer.end_offsets([tp])
-            end = end_offsets.get(tp, 0)
-            
-            if end == 0:
-                logger.error(
-                    "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
-                )
-                consumer.close()
-                return None
-                
-            consumer.seek(tp, end - 1)
-            recs = await consumer.getmany(timeout_ms=5000)
-            consumer.close()
-            for batch in recs.values():
-                for rec in batch:
-                    return json.loads(rec.value.decode())
+        consumer.seek(tp, end - 1)
+        recs = consumer.poll(timeout_ms=5000)
+        consumer.close()
+        for batch in recs.values():
+            for rec in batch:
+                return json.loads(rec.value.decode())
     except Exception as exc:
         logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
+    return None
+
+def fetch_metadata_confluent(
+    bootstrap: str,
+    cfg: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Fetch metadata using confluent-kafka library."""
+    
+    builder = _CONSUMER_BUILDERS.get("confluent")
+    if builder is None:
+        logger.error("[ERR-204] Unsupported Kafka library: confluent")
+        return None
+
+    topic = "superstream.metadata_v1"
+    try:
+        consumer = builder(bootstrap, cfg)
+
+        if not consumer.partitions_for_topic(topic):
+            logger.error(
+                "[ERR-201] Superstream internal topic is missing. Please ensure permissions for superstream.* topics."
+            )
+            consumer.close()
+            return None
+
+        from confluent_kafka import TopicPartition  # type: ignore
+
+        tp = TopicPartition(topic, 0)
+        consumer.assign([tp])
+        low, high = consumer.get_watermark_offsets(tp, timeout=5.0)
+        if high == 0:
+            logger.error(
+                "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
+            )
+            consumer.close()
+            return None
+        consumer.seek(TopicPartition(topic, 0, high - 1))
+        msg = consumer.poll(timeout=5.0)
+        consumer.close()
+        if msg and msg.value():
+            return json.loads(msg.value().decode())
+    except Exception as exc:
+        logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
+    return None
+
+async def fetch_metadata_aiokafka(
+    bootstrap: str,
+    cfg: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Fetch metadata using aiokafka library."""
+    
+    builder = _CONSUMER_BUILDERS.get("aiokafka")
+    if builder is None:
+        logger.error("[ERR-204] Unsupported Kafka library: aiokafka")
+        return None
+
+    topic = "superstream.metadata_v1"
+    consumer = None
+    try:
+        consumer = builder(bootstrap, cfg)
+        
+        # Start the consumer first
+        await consumer.start()
+
+        # For aiokafka, partitions_for_topic returns a set, not a coroutine
+        partitions = consumer.partitions_for_topic(topic)
+        if not partitions:
+            logger.error(
+                "[ERR-201] Superstream internal topic is missing. Please ensure permissions for superstream.* topics."
+            )
+            await consumer.stop()
+            return None
+
+        # aiokafka uses its own TopicPartition and async API
+        from aiokafka import TopicPartition  # type: ignore
+
+        tp = TopicPartition(topic, 0)
+        consumer.assign([tp])
+        
+        # Get the end offset safely using aiokafka's API
+        end_offsets = await consumer.end_offsets([tp])
+        end = end_offsets.get(tp, 0)
+        
+        if end == 0:
+            logger.error(
+                "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
+            )
+            await consumer.stop()
+            return None
+            
+        consumer.seek(tp, end - 1)
+        recs = await consumer.getmany(timeout_ms=5000)
+        await consumer.stop()
+        for batch in recs.values():
+            for rec in batch:
+                return json.loads(rec.value.decode())
+    except Exception as exc:
+        logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
+        if consumer:
+            try:
+                await consumer.stop()
+            except:
+                pass
     return None
 
 def fetch_metadata_sync(
@@ -163,8 +215,27 @@ def fetch_metadata_sync(
     """Synchronous wrapper for fetch_metadata."""
     import asyncio
     
-    # Run the async function synchronously for all libraries
-    return asyncio.run(fetch_metadata(bootstrap, cfg, lib_name))
+    if lib_name == "kafka-python":
+        return fetch_metadata_kafka_python(bootstrap, cfg)
+    elif lib_name == "confluent":
+        return fetch_metadata_confluent(bootstrap, cfg)
+    elif lib_name == "aiokafka":
+        # For aiokafka, we need to handle the async case
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_running_loop()
+            # If we get here, there's already a running event loop
+            # We need to create a new event loop in a separate thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, fetch_metadata_aiokafka(bootstrap, cfg))
+                return future.result()
+        except RuntimeError:
+            # No event loop is running, we can use asyncio.run()
+            return asyncio.run(fetch_metadata_aiokafka(bootstrap, cfg))
+    else:
+        logger.error("[ERR-204] Unsupported Kafka library: {}", lib_name)
+        return None
 
 def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dict[str, Any], lib_name: str) -> tuple[Dict[str, Any], str]:
     """Compute optimal configuration based on metadata and topics.

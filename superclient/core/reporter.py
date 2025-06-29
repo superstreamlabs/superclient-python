@@ -55,7 +55,7 @@ async def _create_producer_aiokafka(bootstrap: str, base_cfg: Dict[str, Any]):
         "bootstrap_servers": bootstrap,
         "client_id": _SUPERLIB_PREFIX + "client-reporter",
         "compression_type": "zstd",
-        "batch_size": 16_384,
+        "max_batch_size": 16_384,
         "linger_ms": 1000,
     }
     copy_client_configuration_properties(base_cfg, cfg, "aiokafka")
@@ -80,7 +80,19 @@ def internal_send_clients(bootstrap: str, base_cfg: Dict[str, Any], payload: byt
     try:
         # Handle aiokafka (async library)
         if lib_name == "aiokafka":
-            asyncio.run(internal_send_clients_async(bootstrap, base_cfg, payload))
+            # Handle the case where an event loop is already running
+            try:
+                # Try to get the current event loop
+                loop = asyncio.get_running_loop()
+                # If we get here, there's already a running event loop
+                # We need to create a new event loop in a separate thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, internal_send_clients_async(bootstrap, base_cfg, payload))
+                    future.result()
+            except RuntimeError:
+                # No event loop is running, we can use asyncio.run()
+                asyncio.run(internal_send_clients_async(bootstrap, base_cfg, payload))
             return
 
         # Handle kafka-python (sync library)
@@ -98,8 +110,8 @@ def internal_send_clients(bootstrap: str, base_cfg: Dict[str, Any], payload: byt
             prod.flush()
             return
 
-    except Exception:
-        logger.debug("Failed to send clients message via {}", lib_name)
+    except Exception as e:
+        logger.error("Failed to send clients message via {}: {}", lib_name, e)
 
 
 async def internal_send_clients_async(bootstrap: str, base_cfg: Dict[str, Any], payload: bytes) -> None:
@@ -111,8 +123,8 @@ async def internal_send_clients_async(bootstrap: str, base_cfg: Dict[str, Any], 
             await prod.send_and_wait("superstream.clients", payload)
         finally:
             await prod.stop()
-    except Exception:
-        logger.debug("Failed to send clients message via aiokafka")
+    except Exception as e:
+        logger.error("Failed to send clients message via aiokafka: {}", e)
 
 
 def send_clients_msg(tracker: Any, error: str = "") -> None:
