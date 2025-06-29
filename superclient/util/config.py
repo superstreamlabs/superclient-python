@@ -52,13 +52,18 @@ def _serialize_config_value(v: Any) -> Any:
     else:
         return v
 
-def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any]):
+def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any], lib_name: str = "confluent"):
     """Copy essential client configuration properties from source to destination.
     This ensures internal Kafka clients have the same security, network, and connection
     configurations as the user's Kafka clients.
     Only copies properties that are explicitly set in the source configuration.
+    
+    Args:
+        src: Source configuration (in library-specific syntax)
+        dst: Destination configuration (in library-specific syntax)
+        lib_name: Library name for key translation
     """
-    # List of all possible auth/network related configs
+    # List of all possible auth/network related configs in Java-style syntax
     possible_keys = [
         # Security protocol
         "security.protocol",
@@ -108,10 +113,20 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
         "retries"
     ]
 
-    # Only copy properties that are explicitly set in the source configuration
-    for k in possible_keys:
-        if k in src and k not in dst:
-            dst[k] = src[k]
+    # For each Java-style key, find if it exists in the source config
+    # by checking both the Java-style key and its library-specific equivalent
+    for java_key in possible_keys:
+        # Check if the Java-style key exists in source
+        if java_key in src:
+            if java_key not in dst:
+                dst[java_key] = src[java_key]
+            continue
+            
+        # Check if the library-specific equivalent exists in source
+        if lib_name in _JAVA_TO_LIB_MAPPING:
+            lib_key = _JAVA_TO_LIB_MAPPING[lib_name].get(java_key, java_key)
+            if lib_key in src and lib_key not in dst:
+                dst[lib_key] = src[lib_key]
 
 # ---------------------------------------------------------------------------
 # Field name mapping between Java-style and library-specific representations

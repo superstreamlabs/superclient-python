@@ -29,7 +29,7 @@ def _create_producer_kafka_python(bootstrap: str, base_cfg: Dict[str, Any]):
         "batch.size": 16_384,
         "linger.ms": 1000,
     }
-    copy_client_configuration_properties(base_cfg, cfg)
+    copy_client_configuration_properties(base_cfg, cfg, "kafka-python")
     kafka_cfg = {k.replace(".", "_"): v for k, v in cfg.items()}
     return kafka.KafkaProducer(**kafka_cfg)
 
@@ -44,7 +44,7 @@ def _create_producer_confluent(bootstrap: str, base_cfg: Dict[str, Any]):
         "batch.size": 16384,
         "linger.ms": 1000,
     }
-    copy_client_configuration_properties(base_cfg, cfg)
+    copy_client_configuration_properties(base_cfg, cfg, "confluent")
     return _CProducer(cfg)
 
 
@@ -58,7 +58,7 @@ async def _create_producer_aiokafka(bootstrap: str, base_cfg: Dict[str, Any]):
         "batch_size": 16_384,
         "linger_ms": 1000,
     }
-    copy_client_configuration_properties(base_cfg, cfg)
+    copy_client_configuration_properties(base_cfg, cfg, "aiokafka")
     return AIOKafkaProducer(**cfg)
 
 

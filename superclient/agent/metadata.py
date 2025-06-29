@@ -24,7 +24,7 @@ def _create_consumer_kafka_python(bootstrap: str, base_cfg: Dict[str, Any]):
         "enable_auto_commit": False,
         "auto_offset_reset": "earliest",
     }
-    copy_client_configuration_properties(base_cfg, consumer_cfg)
+    copy_client_configuration_properties(base_cfg, consumer_cfg, "kafka-python")
     return kafka.KafkaConsumer(**consumer_cfg)
 
 def _create_consumer_aiokafka(bootstrap: str, base_cfg: Dict[str, Any]):
@@ -36,7 +36,7 @@ def _create_consumer_aiokafka(bootstrap: str, base_cfg: Dict[str, Any]):
         "enable_auto_commit": False,
         "auto_offset_reset": "earliest",
     }
-    copy_client_configuration_properties(base_cfg, consumer_cfg)
+    copy_client_configuration_properties(base_cfg, consumer_cfg, "aiokafka")
     return AIOKafkaConsumer(**consumer_cfg)
 
 def _create_consumer_confluent(bootstrap: str, base_cfg: Dict[str, Any]):
@@ -48,7 +48,7 @@ def _create_consumer_confluent(bootstrap: str, base_cfg: Dict[str, Any]):
         "enable.auto.commit": False,
         "auto.offset.reset": "earliest",
     }
-    copy_client_configuration_properties(base_cfg, consumer_cfg)
+    copy_client_configuration_properties(base_cfg, consumer_cfg, "confluent")
     return Consumer(consumer_cfg)
 
 _CONSUMER_BUILDERS = {
@@ -108,14 +108,18 @@ def fetch_metadata(
 
             tp = _kafka.TopicPartition(topic, 0)
             consumer.assign([tp])
-            consumer.seek_to_end(tp)
-            end = consumer.position(tp)
+            
+            # Get the end offset safely
+            end_offsets = consumer.end_offsets([tp])
+            end = end_offsets.get(tp, 0)
+            
             if end == 0:
                 logger.error(
                     "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
                 )
                 consumer.close()
                 return None
+                
             consumer.seek(tp, end - 1)
             recs = consumer.poll(timeout_ms=5000)
             consumer.close()

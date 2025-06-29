@@ -60,7 +60,7 @@ def fetch_metadata_kafka_python(bootstrap: str, cfg: Dict[str, Any]) -> Optional
             "enable_auto_commit": False,
             "group_id": "superstream-metadata-fetcher",
         }
-        copy_client_configuration_properties(cfg, kafka_cfg)
+        copy_client_configuration_properties(cfg, kafka_cfg, "kafka-python")
         
         # Create consumer and fetch message
         consumer = KafkaConsumer(topic, **kafka_cfg)
@@ -102,7 +102,7 @@ def fetch_metadata_confluent(bootstrap: str, cfg: Dict[str, Any]) -> Optional[Me
             "enable.auto.commit": False,
             "group.id": "superstream-metadata-fetcher",
         }
-        copy_client_configuration_properties(cfg, kafka_cfg)
+        copy_client_configuration_properties(cfg, kafka_cfg, "confluent")
         
         # Create consumer and fetch message
         consumer = Consumer(kafka_cfg)
@@ -139,7 +139,7 @@ async def fetch_metadata_aiokafka(bootstrap: str, cfg: Dict[str, Any]) -> Option
             "enable_auto_commit": False,
             "group_id": "superstream-metadata-fetcher",
         }
-        copy_client_configuration_properties(cfg, kafka_cfg)
+        copy_client_configuration_properties(cfg, kafka_cfg, "aiokafka")
         
         # Create consumer and fetch message
         consumer = AIOKafkaConsumer(topic, **kafka_cfg)
