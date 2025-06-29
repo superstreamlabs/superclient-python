@@ -80,6 +80,7 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
         "ssl.ca.location", "ssl.ca.pem",
         "ssl.ca.certificate.stores", "ssl.crl.location",
         "ssl.providers", "ssl.context",
+        "ssl.cafile", "ssl.certfile", "ssl.keyfile",
 
         # SASL properties
         "sasl.mechanism", "sasl.mechanisms", "sasl.jaas.config",
@@ -92,6 +93,7 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
         "sasl.login.refresh.min.period.seconds", "sasl.login.refresh.buffer.seconds",
         "sasl.login.retry.backoff.ms", "sasl.login.retry.backoff.max.ms",
         "sasl.username", "sasl.password",
+        "sasl.plain.username", "sasl.plain.password",
         "sasl.oauthbearer.config", "sasl.oauthbearer.client.id",
         "sasl.oauthbearer.client.secret", "sasl.oauthbearer.scope",
         "sasl.oauthbearer.extensions", "sasl.oauthbearer.token.endpoint.url",
@@ -167,11 +169,16 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "metrics.num.samples": "metrics_num_samples",
         "metrics.sample.window.ms": "metrics_sample_window_ms",
         "sasl.mechanism": "sasl_mechanism",
+        "sasl.plain.username": "sasl_plain_username",
+        "sasl.plain.password": "sasl_plain_password",
         "sasl.kerberos.name": "sasl_kerberos_name",
         "sasl.kerberos.service.name": "sasl_kerberos_service_name",
         "sasl.kerberos.domain.name": "sasl_kerberos_domain_name",
         "sasl.oauth.token.provider": "sasl_oauth_token_provider",
         "socks5.proxy": "socks5_proxy",
+        "ssl.cafile": "ssl_cafile",
+        "ssl.certfile": "ssl_certfile", 
+        "ssl.keyfile": "ssl_keyfile",
     },
     "aiokafka": {
         # Basic configuration
