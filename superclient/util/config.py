@@ -30,7 +30,27 @@ def get_topics_list() -> List[str]:
 
 def mask_sensitive(k: str, v: Any) -> Any:
     """Mask sensitive configuration values."""
-    return "[MASKED]" if "password" in k.lower() or "sasl.jaas.config" in k.lower() else v
+    sensitive_patterns = [
+        "password", "sasl.jaas.config", "basic.auth.user.info",
+        "ssl.key", "ssl.cert", "ssl.truststore", "ssl.keystore",
+        "sasl.kerberos.keytab", "sasl.kerberos.principal"
+    ]
+    return "[MASKED]" if any(pattern in k.lower() for pattern in sensitive_patterns) else v
+
+def _serialize_config_value(v: Any) -> Any:
+    """Convert configuration values to JSON-serializable format."""
+    if callable(v):
+        # Convert functions to string representation
+        return f"<function: {v.__name__ if hasattr(v, '__name__') else str(v)}>"
+    elif hasattr(v, '__dict__'):
+        # Handle objects that might have __dict__ but aren't functions
+        try:
+            # Try to serialize as dict, fallback to string representation
+            return v.__dict__
+        except:
+            return f"<object: {type(v).__name__}>"
+    else:
+        return v
 
 def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any]):
     """Copy essential client configuration properties from source to destination.
@@ -137,7 +157,6 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "sasl.kerberos.domain.name": "sasl_kerberos_domain_name",
         "sasl.oauth.token.provider": "sasl_oauth_token_provider",
         "socks5.proxy": "socks5_proxy",
-        "compression.codec": "compression_type",  # Maps to compression_type
     },
     "aiokafka": {
         # Basic configuration
@@ -159,7 +178,6 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "enable.idempotence": "enable_idempotence",
         "security.protocol": "security_protocol",
         "sasl.mechanism": "sasl_mechanism",
-        "compression.codec": "compression_type",  # Maps to compression_type
     },
     "confluent": {
         # Confluent uses Java-style names directly, so most mappings are 1:1
@@ -256,7 +274,7 @@ _DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
         "enable_idempotence": False,
         "delivery_timeout_ms": 120000,
         "acks": 1,
-        "compression_type": None,
+        "compression_type": "none",
         "retries": 0,
         "batch_size": 16384,
         "linger_ms": 0,
@@ -303,7 +321,7 @@ _DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
         
         # Producer specific
         "acks": 1,
-        "compression_type": None,
+        "compression_type": "none",
         "max_batch_size": 16384,  # aiokafka uses max_batch_size
         "linger_ms": 0,
         "partitioner": None,
@@ -422,5 +440,10 @@ def get_original_config(orig_cfg: Dict[str, Any], lib_name: str) -> Dict[str, An
     for k, v in defaults_java.items():
         if k not in user_keys_java:
             merged[k] = v
+    
+    # Serialize any function objects to make them JSON-serializable
+    serialized: Dict[str, Any] = {}
+    for k, v in merged.items():
+        serialized[k] = _serialize_config_value(v)
             
-    return merged
+    return serialized

@@ -69,7 +69,9 @@ def patch_kafka_python(mod):
                 opt_cfg = {}
             else:
                 # Get optimized configuration if Superstream is active
-                opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg, "kafka-python")
+                opt_cfg, warning_msg = optimal_cfg(metadata, topics_env, orig_cfg, "kafka-python")
+                if warning_msg:
+                    error_msg = warning_msg
             
             # Apply optimized configuration
             for k, v in opt_cfg.items():
@@ -99,9 +101,6 @@ def patch_kafka_python(mod):
             )
             Heartbeat.register_tracker(tr)
 
-            # Initialize the producer with original configuration
-            orig_init(self, *args, **kwargs)
-
             # Patch send and close methods if not already patched
             if not hasattr(self, "_superstream_patch"):
                 original_send = self.send
@@ -125,7 +124,7 @@ def patch_kafka_python(mod):
                 self.close = close_patch
                 self._superstream_patch = True
 
-            # Initialize again with optimized configuration
+            # Initialize with optimized configuration
             orig_init(self, *args, **kwargs)
             
             # Send client registration message
@@ -191,7 +190,9 @@ def patch_aiokafka(mod):
                 opt_cfg = {}
             else:
                 # Get optimized configuration if Superstream is active
-                opt_cfg = optimal_cfg(metadata, topics_env, orig_cfg, "aiokafka")
+                opt_cfg, warning_msg = optimal_cfg(metadata, topics_env, orig_cfg, "aiokafka")
+                if warning_msg:
+                    error_msg = warning_msg
             for k, v in opt_cfg.items():
                 current_val = kwargs.get(k)
                 if current_val != v:
@@ -214,7 +215,6 @@ def patch_aiokafka(mod):
                 topics_env=topics_env,
             )
             Heartbeat.register_tracker(tr)
-            orig_init(self, *args, **kwargs)
             if not hasattr(self, "_superstream_patch"):
                 original_send = self.send
 
@@ -294,7 +294,9 @@ def patch_confluent(mod):
                 opt_cfg = {}
             else:
                 # Get optimized configuration if Superstream is active
-                opt_cfg = optimal_cfg(metadata, topics_env, conf, "confluent")
+                opt_cfg, warning_msg = optimal_cfg(metadata, topics_env, conf, "confluent")
+                if warning_msg:
+                    error_msg = warning_msg
             for k, v in opt_cfg.items():
                 current_val = conf.get(k)
                 if current_val != v:

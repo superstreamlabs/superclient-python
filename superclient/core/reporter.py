@@ -78,18 +78,26 @@ def internal_send_clients(bootstrap: str, base_cfg: Dict[str, Any], payload: byt
         return
 
     try:
+        # Handle aiokafka (async library)
         if lib_name == "aiokafka":
             asyncio.run(internal_send_clients_async(bootstrap, base_cfg, payload))
             return
 
-        prod = builder(bootstrap, base_cfg)
-        if hasattr(prod, "produce"):
-            prod.produce("superstream.clients", payload)
-            prod.flush()
-        else:
+        # Handle kafka-python (sync library)
+        if lib_name == "kafka-python":
+            prod = builder(bootstrap, base_cfg)
             prod.send("superstream.clients", payload)
             prod.flush()
             prod.close()
+            return
+
+        # Handle confluent-kafka (sync library with different API)
+        if lib_name == "confluent":
+            prod = builder(bootstrap, base_cfg)
+            prod.produce("superstream.clients", payload)
+            prod.flush()
+            return
+
     except Exception:
         logger.debug("Failed to send clients message via {}", lib_name)
 

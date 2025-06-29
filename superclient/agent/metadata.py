@@ -126,25 +126,40 @@ def fetch_metadata(
         logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
     return None
 
-def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dict[str, Any], lib_name: str) -> Dict[str, Any]:
-    """Compute optimal configuration based on metadata and topics."""
+def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dict[str, Any], lib_name: str) -> tuple[Dict[str, Any], str]:
+    """Compute optimal configuration based on metadata and topics.
+    
+    Returns:
+        tuple: (configuration_dict, warning_message)
+    """
     latency = os.getenv("SUPERSTREAM_LATENCY_SENSITIVE", "false").lower() == "true"
     cfg: Dict[str, Any]
+    warning_msg = ""
+    
     if not metadata or not metadata.get("topics_configuration"):
         logger.debug("No metadata or topics_configuration found; applying default configuration: %s", _DEFAULTS)
-        logger.warning("The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console")
+        if not topics:
+            warning_msg = "No SUPERSTREAM_TOPICS_LIST environment variable set. Please set it to enable topic-specific optimizations."
+        else:
+            warning_msg = "The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console"
+        logger.warning(warning_msg)
         cfg = dict(_DEFAULTS)
     else:
         matches = [tc for tc in metadata["topics_configuration"] if tc["topic_name"] in topics]
         if not matches:
             logger.debug("No matching topics found in metadata; applying default configuration: %s", _DEFAULTS)
-            logger.warning("The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console")
+            if not topics:
+                warning_msg = "No SUPERSTREAM_TOPICS_LIST environment variable set. Please set it to enable topic-specific optimizations."
+            else:
+                warning_msg = "The topics you're publishing to haven't been analyzed yet. For optimal results, either wait for the next analysis cycle or trigger one manually via the SuperClient Console"
+            logger.warning(warning_msg)
             cfg = dict(_DEFAULTS)
         else:
             best = max(matches, key=lambda tc: tc["potential_reduction_percentage"] * tc["daily_writes_bytes"])
             cfg = dict(best.get("optimized_configuration", {}))
             for k, v in _DEFAULTS.items():
                 cfg.setdefault(k, v)
+    
     if latency:
         cfg.pop("linger.ms", None)
     
@@ -165,4 +180,4 @@ def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dic
                 pass
     
     # Translate Java-style keys to library-specific keys
-    return translate_java_to_lib(cfg, lib_name) 
+    return translate_java_to_lib(cfg, lib_name), warning_msg 
