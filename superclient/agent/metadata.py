@@ -165,7 +165,23 @@ def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dic
                 cfg.setdefault(k, v)
     
     if latency:
-        cfg.pop("linger.ms", None)
+        # For latency-sensitive applications, don't apply linger.ms optimization
+        # Keep the original value if it exists, otherwise use a default
+        if "linger.ms" in cfg:
+            # Get the original linger.ms value if it exists
+            orig_linger_key = None
+            if lib_name == "kafka-python" or lib_name == "aiokafka":
+                orig_linger_key = "linger_ms"
+            elif lib_name == "confluent":
+                orig_linger_key = "linger.ms"
+            
+            if orig_linger_key and orig_linger_key in orig:
+                # Use the original value instead of the optimized one
+                cfg["linger.ms"] = orig[orig_linger_key]
+                logger.debug("Using original linger.ms value ({}) for latency-sensitive application", orig[orig_linger_key])
+            else:
+                # Remove the optimized value but it will be added back as default later
+                cfg.pop("linger.ms")
     
     # Translate Java-style keys to library-specific keys for comparison
     java_keys_to_check = ["batch.size", "linger.ms"]
@@ -179,9 +195,17 @@ def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dic
         if lib_key in orig and java_key in cfg:
             try:
                 if int(orig[lib_key]) > int(cfg[java_key]):
+                    logger.debug("Keeping original {} value ({}) as it's larger than optimized ({})", java_key, orig[lib_key], cfg[java_key])
                     cfg[java_key] = orig[lib_key]
             except Exception:
                 pass
+    
+    # Ensure all core optimization parameters are present in the final config
+    # But don't add linger.ms back if it was removed for latency sensitivity
+    for k, v in _DEFAULTS.items():
+        if k not in cfg:
+            if not (latency and k == "linger.ms"):
+                cfg[k] = v
     
     # Translate Java-style keys to library-specific keys
     return translate_java_to_lib(cfg, lib_name), warning_msg 

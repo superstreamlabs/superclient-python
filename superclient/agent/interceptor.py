@@ -37,6 +37,10 @@ def patch_kafka_python(mod):
         # Store original configuration
         orig_cfg = dict(kwargs)
         
+        # Normalize compression type: convert None to "none" string
+        if "compression_type" in orig_cfg and orig_cfg["compression_type"] is None:
+            orig_cfg["compression_type"] = "none"
+        
         # Get bootstrap servers from args or kwargs
         bootstrap = orig_cfg.get("bootstrap_servers") or (args[0] if args else None)
         if not bootstrap:
@@ -164,6 +168,11 @@ def patch_aiokafka(mod):
         if is_disabled():
             return orig_init(self, *args, **kwargs)
         orig_cfg = dict(kwargs)
+        
+        # Normalize compression type: convert None to "none" string
+        if "compression_type" in orig_cfg and orig_cfg["compression_type"] is None:
+            orig_cfg["compression_type"] = "none"
+        
         bootstrap = orig_cfg.get("bootstrap_servers")
         if not bootstrap and args:
             bootstrap = args[0]
@@ -270,6 +279,11 @@ def patch_confluent(mod):
         if is_disabled():
             return orig_init(self, conf, *args, **kwargs)
         conf = dict(conf)
+        
+        # Normalize compression type: convert None to "none" string
+        if "compression.type" in conf and conf["compression.type"] is None:
+            conf["compression.type"] = "none"
+        
         bootstrap = conf.get("bootstrap.servers")
         if not bootstrap:
             return orig_init(self, conf, *args, **kwargs)
