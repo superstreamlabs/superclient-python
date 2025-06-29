@@ -147,11 +147,20 @@ def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dic
                 cfg.setdefault(k, v)
     if latency:
         cfg.pop("linger.ms", None)
-    for p in ("batch.size", "linger.ms"):
-        if p in orig and p in cfg:
+    
+    # Translate Java-style keys to library-specific keys for comparison
+    java_keys_to_check = ["batch.size", "linger.ms"]
+    lib_keys_to_check = []
+    for java_key in java_keys_to_check:
+        translated = translate_java_to_lib({java_key: ""}, lib_name)
+        lib_key = list(translated.keys())[0] if translated else java_key
+        lib_keys_to_check.append(lib_key)
+    
+    for java_key, lib_key in zip(java_keys_to_check, lib_keys_to_check):
+        if lib_key in orig and java_key in cfg:
             try:
-                if int(orig[p]) > int(cfg[p]):
-                    cfg[p] = orig[p]
+                if int(orig[lib_key]) > int(cfg[java_key]):
+                    cfg[java_key] = orig[lib_key]
             except Exception:
                 pass
     
