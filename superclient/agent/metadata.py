@@ -3,6 +3,7 @@
 import json
 import os
 from typing import Any, Dict, Optional, Literal
+import time
 
 from ..util.logger import get_logger
 from ..util.config import copy_client_configuration_properties, translate_java_to_lib
@@ -47,6 +48,11 @@ def _create_consumer_confluent(bootstrap: str, base_cfg: Dict[str, Any]):
         "client.id": "superstreamlib-metadata-consumer",
         "enable.auto.commit": False,
         "auto.offset.reset": "earliest",
+        "group.id": "superstreamlib-metadata-consumer",
+        "session.timeout.ms": 10000,
+        "heartbeat.interval.ms": 3000,
+        "max.poll.interval.ms": 30000,
+        "enable.partition.eof": True,
     }
     copy_client_configuration_properties(base_cfg, consumer_cfg, "confluent")
     return Consumer(consumer_cfg)
@@ -117,34 +123,77 @@ def fetch_metadata_confluent(
         return None
 
     topic = "superstream.metadata_v1"
+    consumer = None
     try:
         consumer = builder(bootstrap, cfg)
 
-        if not consumer.partitions_for_topic(topic):
+        from confluent_kafka import TopicPartition  # type: ignore
+
+        # First, try to get metadata to check if topic exists
+        try:
+            # Get topic metadata to check if topic exists
+            metadata = consumer.list_topics(topic=topic, timeout=5.0)
+            if topic not in metadata.topics:
+                logger.error(
+                    "[ERR-201] Superstream internal topic is missing. Please ensure permissions for superstream.* topics."
+                )
+                consumer.close()
+                return None
+        except Exception:
             logger.error(
                 "[ERR-201] Superstream internal topic is missing. Please ensure permissions for superstream.* topics."
             )
             consumer.close()
             return None
 
-        from confluent_kafka import TopicPartition  # type: ignore
-
+        # Assign to partition 0
         tp = TopicPartition(topic, 0)
         consumer.assign([tp])
-        low, high = consumer.get_watermark_offsets(tp, timeout=5.0)
+        
+        # Poll to ensure assignment is complete and add a small delay
+        consumer.poll(timeout=1.0)
+        time.sleep(0.1)  # Small delay to ensure consumer is ready
+        
+        # Get watermark offsets to find the last message
+        try:
+            low, high = consumer.get_watermark_offsets(tp, timeout=5.0)
+        except Exception as e:
+            logger.error("[ERR-203] Failed to get watermark offsets: {}", e)
+            consumer.close()
+            return None
+            
         if high == 0:
             logger.error(
                 "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
             )
             consumer.close()
             return None
-        consumer.seek(TopicPartition(topic, 0, high - 1))
+        
+        # Seek to the last message (high - 1)
+        try:
+            consumer.seek(TopicPartition(topic, 0, high - 1))
+        except Exception as e:
+            logger.error("[ERR-203] Failed to seek to last message: {}", e)
+            consumer.close()
+            return None
+            
+        # Poll for the message
         msg = consumer.poll(timeout=5.0)
         consumer.close()
+        
         if msg and msg.value():
             return json.loads(msg.value().decode())
+        else:
+            logger.error("[ERR-202] No message found at last offset")
+            return None
+            
     except Exception as exc:
         logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
+        if consumer:
+            try:
+                consumer.close()
+            except:
+                pass
     return None
 
 async def fetch_metadata_aiokafka(
