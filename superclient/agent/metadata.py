@@ -57,7 +57,7 @@ _CONSUMER_BUILDERS = {
     "confluent": _create_consumer_confluent,
 }
 
-def fetch_metadata(
+async def fetch_metadata(
     bootstrap: str,
     cfg: Dict[str, Any],
     lib_name: Literal["kafka-python", "aiokafka", "confluent"],
@@ -103,7 +103,7 @@ def fetch_metadata(
             if msg and msg.value():
                 return json.loads(msg.value().decode())
 
-        else:  # kafka-python / aiokafka share similar API
+        elif lib_name == "kafka-python":
             import kafka as _kafka  # type: ignore
 
             tp = _kafka.TopicPartition(topic, 0)
@@ -126,9 +126,45 @@ def fetch_metadata(
             for batch in recs.values():
                 for rec in batch:
                     return json.loads(rec.value.decode())
+
+        elif lib_name == "aiokafka":
+            # aiokafka uses its own TopicPartition and async API
+            from aiokafka import TopicPartition  # type: ignore
+
+            tp = TopicPartition(topic, 0)
+            consumer.assign([tp])
+            
+            # Get the end offset safely using aiokafka's API
+            end_offsets = await consumer.end_offsets([tp])
+            end = end_offsets.get(tp, 0)
+            
+            if end == 0:
+                logger.error(
+                    "[ERR-202] Unable to retrieve optimizations data from Superstream – topic empty."
+                )
+                consumer.close()
+                return None
+                
+            consumer.seek(tp, end - 1)
+            recs = await consumer.getmany(timeout_ms=5000)
+            consumer.close()
+            for batch in recs.values():
+                for rec in batch:
+                    return json.loads(rec.value.decode())
     except Exception as exc:
         logger.error("[ERR-203] Failed to fetch metadata: {}", exc)
     return None
+
+def fetch_metadata_sync(
+    bootstrap: str,
+    cfg: Dict[str, Any],
+    lib_name: Literal["kafka-python", "aiokafka", "confluent"],
+) -> Optional[Dict[str, Any]]:
+    """Synchronous wrapper for fetch_metadata."""
+    import asyncio
+    
+    # Run the async function synchronously for all libraries
+    return asyncio.run(fetch_metadata(bootstrap, cfg, lib_name))
 
 def optimal_cfg(metadata: Optional[Dict[str, Any]], topics: list[str], orig: Dict[str, Any], lib_name: str) -> tuple[Dict[str, Any], str]:
     """Compute optimal configuration based on metadata and topics.

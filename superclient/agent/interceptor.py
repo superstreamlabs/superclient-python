@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from ..util.logger import get_logger
 from ..util.config import get_topics_list, is_disabled
-from .metadata import fetch_metadata, optimal_cfg, _DEFAULTS
+from .metadata import fetch_metadata_sync, optimal_cfg, _DEFAULTS
 from ..core.reporter import send_clients_msg
 from ..core.manager import normalize_bootstrap
 from .tracker import ProducerTracker, Heartbeat
@@ -57,7 +57,7 @@ def patch_kafka_python(mod):
         try:
             # Get topics and metadata for optimization
             topics_env = get_topics_list()
-            metadata = fetch_metadata(bootstrap, orig_cfg, "kafka-python")
+            metadata = fetch_metadata_sync(bootstrap, orig_cfg, "kafka-python")
             
             # Check if Superstream is active for this cluster
             error_msg = ""
@@ -185,7 +185,7 @@ def patch_aiokafka(mod):
 
         try:
             topics_env = get_topics_list()
-            metadata = fetch_metadata(bootstrap, orig_cfg, "aiokafka")
+            metadata = fetch_metadata_sync(bootstrap, orig_cfg, "aiokafka")
             error_msg = ""
             if metadata is None:
                 error_msg = "[ERR-304] Failed to fetch metadata for producer with client id {}: Unable to connect to Superstream service".format(client_id)
@@ -294,7 +294,7 @@ def patch_confluent(mod):
 
         try:
             topics_env = get_topics_list()
-            metadata = fetch_metadata(bootstrap, conf, "confluent")
+            metadata = fetch_metadata_sync(bootstrap, conf, "confluent")
             error_msg = ""
             if metadata is None:
                 error_msg = "[ERR-304] Failed to fetch metadata for producer with client id {}: Unable to connect to Superstream service".format(client_id)

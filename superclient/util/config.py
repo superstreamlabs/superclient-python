@@ -31,9 +31,31 @@ def get_topics_list() -> List[str]:
 def mask_sensitive(k: str, v: Any) -> Any:
     """Mask sensitive configuration values."""
     sensitive_patterns = [
+        # Existing patterns
         "password", "sasl.jaas.config", "basic.auth.user.info",
         "ssl.key", "ssl.cert", "ssl.truststore", "ssl.keystore",
-        "sasl.kerberos.keytab", "sasl.kerberos.principal"
+        "sasl.kerberos.keytab", "sasl.kerberos.principal",
+        
+        # Additional SSL properties
+        "ssl.cafile", "ssl.certfile", "ssl.keyfile",
+        "ssl.certificate.location", "ssl.certificate.pem",
+        "ssl.ca.location", "ssl.ca.pem",
+        "ssl.ca.certificate.stores", "ssl.crl.location",
+        "ssl.providers", "ssl.context",
+        
+        # Additional SASL properties
+        "sasl.username", "sasl.password",
+        "sasl.plain.username", "sasl.plain.password",
+        "sasl.oauthbearer.config", "sasl.oauthbearer.client.secret",
+        "sasl.oauthbearer.extensions",
+        
+        # OAuth callback configurations
+        "sasl.oauth.token.provider", "oauth_cb", "sasl_oauth_token_provider",
+        
+        # Library-specific variations
+        "sasl_plain_username", "sasl_plain_password",
+        "ssl_cafile", "ssl_certfile", "ssl_keyfile",
+        "sasl_oauth_token_provider"
     ]
     return "[MASKED]" if any(pattern in k.lower() for pattern in sensitive_patterns) else v
 
@@ -129,6 +151,13 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
             lib_key = _JAVA_TO_LIB_MAPPING[lib_name].get(java_key, java_key)
             if lib_key in src and lib_key not in dst:
                 dst[lib_key] = src[lib_key]
+    
+    # Debug log to show config comparison
+    # Mask sensitive data before logging
+    src_masked = {k: mask_sensitive(k, v) for k, v in src.items()}
+    dst_masked = {k: mask_sensitive(k, v) for k, v in dst.items()}
+    
+    logger.debug("copy_client_configuration_properties - Source config: {}, Destination config: {}", src_masked, dst_masked)
 
 # ---------------------------------------------------------------------------
 # Field name mapping between Java-style and library-specific representations
