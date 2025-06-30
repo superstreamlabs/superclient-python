@@ -129,9 +129,16 @@ def fetch_metadata_confluent(
 
         from confluent_kafka import TopicPartition  # type: ignore
 
-        # First, try to get metadata to check if topic exists
+        # Warm up the connection before attempting list_topics
+        logger.debug("Warming up connection with initial poll...")
         try:
-            # Get topic metadata to check if topic exists
+            consumer.poll(timeout=2.0)
+            logger.debug("Connection warm-up completed")
+        except Exception as e:
+            logger.debug("Connection warm-up failed, continuing anyway: {}", e)
+
+        # Try to get topic metadata, but don't fail if it doesn't work
+        try:
             metadata = consumer.list_topics(topic=topic, timeout=5.0)
             if topic not in metadata.topics:
                 logger.error(
@@ -139,12 +146,9 @@ def fetch_metadata_confluent(
                 )
                 consumer.close()
                 return None
-        except Exception:
-            logger.error(
-                "[ERR-201] Superstream internal topic is missing. Please ensure permissions for superstream.* topics."
-            )
-            consumer.close()
-            return None
+        except Exception as e:
+            logger.debug("Could not list topics, proceeding with assignment: {}", e)
+            # Continue with topic assignment even if list_topics fails
 
         # Assign to partition 0
         tp = TopicPartition(topic, 0)

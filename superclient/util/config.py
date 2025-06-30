@@ -268,6 +268,7 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "message.send.max.retries": "message.send.max.retries",
         "batch.num.messages": "batch.num.messages",
         "compression.codec": "compression.codec",
+        "oauth_cb": "oauth_cb",
     }
 }
 
