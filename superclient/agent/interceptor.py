@@ -89,7 +89,6 @@ def patch_kafka_python(mod):
 
             # Set up reporting interval
             report_interval = metadata.get("report_interval_ms") if metadata else _DEFAULT_REPORT_INTERVAL_MS
-            
             # Create and register producer tracker
             tr = ProducerTracker(
                 lib="kafka-python",
@@ -123,6 +122,7 @@ def patch_kafka_python(mod):
                         self._superstream_closed = True
                         tr.close()
                         Heartbeat.unregister_tracker(tr.uuid)
+                        logger.debug("Superstream tracking stopped for kafka-python producer with client_id: {}", client_id)
                     return orig_close(*a, **kw)
 
                 self.close = close_patch
@@ -239,6 +239,7 @@ def patch_aiokafka(mod):
                         self._superstream_closed = True
                         tr.close()
                         Heartbeat.unregister_tracker(tr.uuid)
+                        logger.debug("Superstream tracking stopped for aiokafka producer with client_id: {}", client_id)
                     await original_stop(*a, **kw)
 
                 self.stop = stop_patch
@@ -386,21 +387,19 @@ def patch_confluent(mod):
                 self._tracker.record_topic(topic)
             return self._producer.produce(topic, *args, **kwargs)
         
-        def poll(self, *args, **kwargs):
-            """Wrapper for poll method."""
-            return self._producer.poll(*args, **kwargs)
-        
-        def flush(self, *args, **kwargs):
-            """Wrapper for flush method."""
-            return self._producer.flush(*args, **kwargs)
-        
-        def close(self, *args, **kwargs):
-            """Wrapper for close method that handles cleanup."""
+        def __del__(self):
+            """Destructor to automatically clean up when producer is garbage collected."""
             if hasattr(self, '_tracker') and not hasattr(self, '_superstream_closed'):
-                self._superstream_closed = True
-                self._tracker.close()
-                Heartbeat.unregister_tracker(self._tracker.uuid)
-            return self._producer.close(*args, **kwargs)
+                try:
+                    self._superstream_closed = True
+                    self._tracker.close()
+                    Heartbeat.unregister_tracker(self._tracker.uuid)
+                    logger.debug("Superstream tracking stopped for confluent-kafka producer with client_id: {}", 
+                               getattr(self._tracker, 'client_id', 'unknown'))
+                except Exception as e:
+                    logger.error("Error during automatic cleanup: {}", e)
+            else:
+                logger.debug("Producer already cleaned up or no tracker found")
         
         def __getattr__(self, name):
             """Delegate all other attributes to the underlying producer."""
