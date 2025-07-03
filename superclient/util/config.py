@@ -100,6 +100,7 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
         "enable.ssl.certificate.verification",
         "ssl.certificate.location", "ssl.certificate.pem",
         "ssl.ca.location", "ssl.ca.pem",
+        "ssl.key.location",
         "ssl.ca.certificate.stores", "ssl.crl.location",
         "ssl.providers", "ssl.context",
         "ssl.cafile", "ssl.certfile", "ssl.keyfile",
@@ -269,6 +270,16 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "batch.num.messages": "batch.num.messages",
         "compression.codec": "compression.codec",
         "oauth_cb": "oauth_cb",
+        
+        # SSL properties (confluent uses Java-style names directly)
+        "ssl.ca.location": "ssl.ca.location",
+        "ssl.certificate.location": "ssl.certificate.location",
+        "ssl.key.location": "ssl.key.location",
+        "ssl.keystore.location": "ssl.keystore.location",
+        "ssl.keystore.password": "ssl.keystore.password",
+        "ssl.key.password": "ssl.key.password",
+        "ssl.endpoint.identification.algorithm": "ssl.endpoint.identification.algorithm",
+        "enable.ssl.certificate.verification": "enable.ssl.certificate.verification",
     }
 }
 

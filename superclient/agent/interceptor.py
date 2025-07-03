@@ -332,6 +332,9 @@ def patch_confluent(mod):
                     if warning_msg:
                         error_msg = warning_msg
                 
+                # Store original configuration before applying optimizations
+                orig_cfg = dict(conf)
+                
                 # Apply optimizations to the configuration
                 for k, v in opt_cfg.items():
                     current_val = conf.get(k)
@@ -351,7 +354,7 @@ def patch_confluent(mod):
                     producer=self._producer,
                     bootstrap=bootstrap,
                     client_id=client_id,
-                    orig_cfg=conf,
+                    orig_cfg=orig_cfg,
                     opt_cfg=opt_cfg,
                     report_interval_ms=int(report_interval or _DEFAULT_REPORT_INTERVAL_MS),
                     error=error_msg,  # Store error message in tracker
