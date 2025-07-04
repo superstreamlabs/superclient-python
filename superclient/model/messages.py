@@ -36,3 +36,7 @@ class ClientMessage:
     most_impactful_topic: str = ""
     language: str = ""
     error: str = ""
+    producer_metrics: Dict[str, Any] = field(default_factory=dict)
+    topic_metrics: Dict[str, Any] = field(default_factory=dict)
+    node_metrics: Dict[str, Any] = field(default_factory=dict)
+    app_info_metrics: Dict[str, Any] = field(default_factory=dict)

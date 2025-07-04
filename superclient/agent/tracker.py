@@ -39,6 +39,7 @@ class ProducerTracker:
         self.error = error
         self.metadata = metadata
         self.topics_env = topics_env or []
+        self.start_time_ms = int(time.time() * 1000)  # Unix timestamp in milliseconds
 
     def record_topic(self, topic: str):
         """Record a topic that this producer writes to."""

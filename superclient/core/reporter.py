@@ -150,6 +150,10 @@ def send_clients_msg(tracker: Any, error: str = "") -> None:
         most_impactful_topic=tracker.determine_topic(),
         language=f"Python ({tracker.library})",
         error=error,
+        producer_metrics={},
+        topic_metrics={},
+        node_metrics={},
+        app_info_metrics={"start-time-ms": str(tracker.start_time_ms)},
     )
     payload = json.dumps(msg.__dict__).encode()
     internal_send_clients(tracker.bootstrap, tracker.orig_cfg, payload, tracker.library)
