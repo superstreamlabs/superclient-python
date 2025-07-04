@@ -140,14 +140,14 @@ pipeline {
             }
         }
         
-        // failure {
-        //     script {
-        //         if (env.GIT_BRANCH == 'latest') { 
-        //             sendSlackNotification('FAILURE')              
-        //             notifyFailed()
-        //         }
-        //     }            
-        // }
+        failure {
+            script {
+                if (env.GIT_BRANCH == 'latest') { 
+                    sendSlackNotification('FAILURE')              
+                    notifyFailed()
+                }
+            }            
+        }
         aborted {
             script {
                 if (env.BRANCH_NAME == 'latest') {
