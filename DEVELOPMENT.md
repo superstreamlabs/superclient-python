@@ -42,7 +42,7 @@ This installs the package in "editable" mode and enables automatic loading, whic
 ## Uninstallation
 
 ```bash
-pip uninstall superclient && find venv/lib/python*/site-packages -name "superclient-init.pth" -delete && rm -rf build/ dist/ superclient.egg-info/ && find . -name "*.pyc" -delete && find . -name "__pycache__" -type d -exec rm -rf {} +
+pip uninstall superstream-clients && find venv/lib/python*/site-packages -name "superclient-init.pth" -delete && rm -rf build/ dist/ superstream_clients.egg-info/ && find . -name "*.pyc" -delete && find . -name "__pycache__" -type d -exec rm -rf {} +
 ```
 
 This single command:
