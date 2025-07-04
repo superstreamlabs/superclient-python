@@ -16,7 +16,19 @@ pipeline {
     }
 
     stages {
+
         stage('Prepare Environment') {
+            when {
+                anyOf {
+                    allOf {
+                        branch 'master'
+                        triggeredBy 'UserIdCause' // Manual trigger on master
+                    }
+                    allOf {
+                        branch 'latest'
+                    }
+                }
+            }            
             steps {
                 script {
                     sh 'git config --global --add safe.directory $(pwd)'
@@ -41,8 +53,11 @@ pipeline {
             
         stage('Beta Release') {
             when {
-                branch 'master'
-            }            
+                allOf {
+                    branch 'master'
+                    triggeredBy 'UserIdCause' // Manual "Build Now"
+                }
+            }           
             steps {
                 sh '''
                 sed -i -E 's/^(name *= *")superstream-clients(")/\\1superstream-clients-beta\\2/' pyproject.toml
@@ -106,7 +121,7 @@ pipeline {
                 }                
                 withCredentials([string(credentialsId: 'gh_token', variable: 'GH_TOKEN')]) {
                 sh """
-                gh release create $versionTag dist/superstream_confluent_kafka-${env.versionTag}.tar.gz --generate-notes
+                gh release create $versionTag dist/superstream_clients-${env.versionTag}.tar.gz --generate-notes
                 """
                 }                
             }
