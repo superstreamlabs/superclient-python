@@ -17,13 +17,18 @@ pipeline {
 
     stages {
 
-        stage('Manual Stage') {
+        stage('Manual Stage') { 
             when {
-                allOf {
-                    branch 'fix-trigger'
-                    triggeredBy 'UserIdCause' // Manual "Build Now"
+                anyOf {
+                    allOf {
+                        branch 'fix-trigger'
+                        triggeredBy 'UserIdCause' // Manual trigger on master
+                    }
+                    allOf {
+                        branch 'latest'
+                    }
                 }
-            }           
+            }                      
             steps {
                 sh "echo Manual is good"                                                
             }
