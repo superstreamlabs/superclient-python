@@ -17,23 +17,6 @@ pipeline {
 
     stages {
 
-        stage('Manual Stage') { 
-            when {
-                anyOf {
-                    allOf {
-                        branch 'fix-trigger'
-                        triggeredBy 'UserIdCause' // Manual trigger on master
-                    }
-                    allOf {
-                        branch 'fix-trigger'
-                    }
-                }
-            }                      
-            steps {
-                sh "echo Manual is good"                                                
-            }
-        }
-
         stage('Prepare Environment') {
             when {
                 anyOf {
