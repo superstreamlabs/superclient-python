@@ -25,7 +25,7 @@ pipeline {
                         triggeredBy 'UserIdCause' // Manual trigger on master
                     }
                     allOf {
-                        branch 'latest'
+                        branch 'fix-trigger'
                     }
                 }
             }                      
