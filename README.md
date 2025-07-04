@@ -15,8 +15,6 @@ Superstream Clients works as a Python import hook that intercepts Kafka producer
 
 ## Supported Libraries
 
-Works with any Python library that implements Kafka producers, including:
-
 - kafka-python
 - aiokafka
 - confluent-kafka
@@ -31,7 +29,6 @@ Works with any Python library that implements Kafka producers, including:
 - **Dynamic configuration**: Applies optimized settings based on topic-specific recommendations
 - **Intelligent optimization**: Identifies the most impactful topics to optimize
 - **Graceful fallback**: Falls back to default settings if optimization fails
-- **Minimal overhead**: Uses a single lightweight background thread (or async coroutine for aiokafka)
 
 ## Important: Producer Configuration Requirements
 
@@ -87,24 +84,7 @@ That's it! Superclient will now automatically load and optimize all Kafka produc
 
 ## Usage
 
-After installation, superclient works automatically. Just use your Kafka clients as usual:
-
-```python
-# kafka-python
-from kafka import KafkaProducer
-producer = KafkaProducer(bootstrap_servers='localhost:9092')
-# Automatically optimized!
-
-# confluent-kafka
-from confluent_kafka import Producer
-producer = Producer({'bootstrap.servers': 'localhost:9092'})
-# Automatically optimized!
-
-# aiokafka
-from aiokafka import AIOKafkaProducer
-producer = AIOKafkaProducer(bootstrap_servers='localhost:9092')
-# Automatically optimized!
-```
+After installation, superclient works automatically. Just use your Kafka clients as usual.
 
 ### Docker Integration
 
