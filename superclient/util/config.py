@@ -30,15 +30,62 @@ def get_topics_list() -> List[str]:
 
 def mask_sensitive(k: str, v: Any) -> Any:
     """Mask sensitive configuration values."""
-    return "[MASKED]" if "password" in k.lower() or "sasl.jaas.config" in k.lower() else v
+    sensitive_patterns = [
+        # Existing patterns
+        "password", "sasl.jaas.config", "basic.auth.user.info",
+        "ssl.key", "ssl.cert", "ssl.truststore", "ssl.keystore",
+        "sasl.kerberos.keytab", "sasl.kerberos.principal",
+        
+        # Additional SSL properties
+        "ssl.cafile", "ssl.certfile", "ssl.keyfile",
+        "ssl.certificate.location", "ssl.certificate.pem",
+        "ssl.ca.location", "ssl.ca.pem",
+        "ssl.ca.certificate.stores", "ssl.crl.location",
+        "ssl.providers", "ssl.context",
+        
+        # Additional SASL properties
+        "sasl.username", "sasl.password",
+        "sasl.plain.username", "sasl.plain.password",
+        "sasl.oauthbearer.config", "sasl.oauthbearer.client.secret",
+        "sasl.oauthbearer.extensions",
+        
+        # OAuth callback configurations
+        "sasl.oauth.token.provider", "oauth_cb", "sasl_oauth_token_provider",
+        
+        # Library-specific variations
+        "sasl_plain_username", "sasl_plain_password",
+        "ssl_cafile", "ssl_certfile", "ssl_keyfile",
+        "sasl_oauth_token_provider"
+    ]
+    return "[MASKED]" if any(pattern in k.lower() for pattern in sensitive_patterns) else v
 
-def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any]):
+def _serialize_config_value(v: Any) -> Any:
+    """Convert configuration values to JSON-serializable format."""
+    if callable(v):
+        # Convert functions to string representation
+        return f"<function: {v.__name__ if hasattr(v, '__name__') else str(v)}>"
+    elif hasattr(v, '__dict__'):
+        # Handle objects that might have __dict__ but aren't functions
+        try:
+            # Try to serialize as dict, fallback to string representation
+            return v.__dict__
+        except:
+            return f"<object: {type(v).__name__}>"
+    else:
+        return v
+
+def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any], lib_name: str = "confluent"):
     """Copy essential client configuration properties from source to destination.
     This ensures internal Kafka clients have the same security, network, and connection
     configurations as the user's Kafka clients.
     Only copies properties that are explicitly set in the source configuration.
+    
+    Args:
+        src: Source configuration (in library-specific syntax)
+        dst: Destination configuration (in library-specific syntax)
+        lib_name: Library name for key translation
     """
-    # List of all possible auth/network related configs
+    # List of all possible auth/network related configs in Java-style syntax
     possible_keys = [
         # Security protocol
         "security.protocol",
@@ -53,8 +100,10 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
         "enable.ssl.certificate.verification",
         "ssl.certificate.location", "ssl.certificate.pem",
         "ssl.ca.location", "ssl.ca.pem",
+        "ssl.key.location",
         "ssl.ca.certificate.stores", "ssl.crl.location",
         "ssl.providers", "ssl.context",
+        "ssl.cafile", "ssl.certfile", "ssl.keyfile",
 
         # SASL properties
         "sasl.mechanism", "sasl.mechanisms", "sasl.jaas.config",
@@ -67,6 +116,7 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
         "sasl.login.refresh.min.period.seconds", "sasl.login.refresh.buffer.seconds",
         "sasl.login.retry.backoff.ms", "sasl.login.retry.backoff.max.ms",
         "sasl.username", "sasl.password",
+        "sasl.plain.username", "sasl.plain.password",
         "sasl.oauthbearer.config", "sasl.oauthbearer.client.id",
         "sasl.oauthbearer.client.secret", "sasl.oauthbearer.scope",
         "sasl.oauthbearer.extensions", "sasl.oauthbearer.token.endpoint.url",
@@ -88,10 +138,27 @@ def copy_client_configuration_properties(src: Dict[str, Any], dst: Dict[str, Any
         "retries"
     ]
 
-    # Only copy properties that are explicitly set in the source configuration
-    for k in possible_keys:
-        if k in src and k not in dst:
-            dst[k] = src[k]
+    # For each Java-style key, find if it exists in the source config
+    # by checking both the Java-style key and its library-specific equivalent
+    for java_key in possible_keys:
+        # Check if the Java-style key exists in source
+        if java_key in src:
+            if java_key not in dst:
+                dst[java_key] = src[java_key]
+            continue
+            
+        # Check if the library-specific equivalent exists in source
+        if lib_name in _JAVA_TO_LIB_MAPPING:
+            lib_key = _JAVA_TO_LIB_MAPPING[lib_name].get(java_key, java_key)
+            if lib_key in src and lib_key not in dst:
+                dst[lib_key] = src[lib_key]
+    
+    # Debug log to show config comparison
+    # Mask sensitive data before logging
+    src_masked = {k: mask_sensitive(k, v) for k, v in src.items()}
+    dst_masked = {k: mask_sensitive(k, v) for k, v in dst.items()}
+    
+    logger.debug("copy_client_configuration_properties - Source config: {}, Destination config: {}", src_masked, dst_masked)
 
 # ---------------------------------------------------------------------------
 # Field name mapping between Java-style and library-specific representations
@@ -132,12 +199,16 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "metrics.num.samples": "metrics_num_samples",
         "metrics.sample.window.ms": "metrics_sample_window_ms",
         "sasl.mechanism": "sasl_mechanism",
+        "sasl.plain.username": "sasl_plain_username",
+        "sasl.plain.password": "sasl_plain_password",
         "sasl.kerberos.name": "sasl_kerberos_name",
         "sasl.kerberos.service.name": "sasl_kerberos_service_name",
         "sasl.kerberos.domain.name": "sasl_kerberos_domain_name",
         "sasl.oauth.token.provider": "sasl_oauth_token_provider",
         "socks5.proxy": "socks5_proxy",
-        "compression.codec": "compression_type",  # Maps to compression_type
+        "ssl.cafile": "ssl_cafile",
+        "ssl.certfile": "ssl_certfile", 
+        "ssl.keyfile": "ssl_keyfile",
     },
     "aiokafka": {
         # Basic configuration
@@ -159,7 +230,9 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "enable.idempotence": "enable_idempotence",
         "security.protocol": "security_protocol",
         "sasl.mechanism": "sasl_mechanism",
-        "compression.codec": "compression_type",  # Maps to compression_type
+        "ssl.context": "ssl_context",
+        "sasl.plain.username": "sasl_plain_username",
+        "sasl.plain.password": "sasl_plain_password",
     },
     "confluent": {
         # Confluent uses Java-style names directly, so most mappings are 1:1
@@ -196,6 +269,17 @@ _JAVA_TO_LIB_MAPPING: Dict[str, Dict[str, str]] = {
         "message.send.max.retries": "message.send.max.retries",
         "batch.num.messages": "batch.num.messages",
         "compression.codec": "compression.codec",
+        "oauth_cb": "oauth_cb",
+        
+        # SSL properties (confluent uses Java-style names directly)
+        "ssl.ca.location": "ssl.ca.location",
+        "ssl.certificate.location": "ssl.certificate.location",
+        "ssl.key.location": "ssl.key.location",
+        "ssl.keystore.location": "ssl.keystore.location",
+        "ssl.keystore.password": "ssl.keystore.password",
+        "ssl.key.password": "ssl.key.password",
+        "ssl.endpoint.identification.algorithm": "ssl.endpoint.identification.algorithm",
+        "enable.ssl.certificate.verification": "enable.ssl.certificate.verification",
     }
 }
 
@@ -256,7 +340,7 @@ _DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
         "enable_idempotence": False,
         "delivery_timeout_ms": 120000,
         "acks": 1,
-        "compression_type": None,
+        "compression_type": "none",
         "retries": 0,
         "batch_size": 16384,
         "linger_ms": 0,
@@ -303,7 +387,7 @@ _DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
         
         # Producer specific
         "acks": 1,
-        "compression_type": None,
+        "compression_type": "none",
         "max_batch_size": 16384,  # aiokafka uses max_batch_size
         "linger_ms": 0,
         "partitioner": None,
@@ -422,5 +506,10 @@ def get_original_config(orig_cfg: Dict[str, Any], lib_name: str) -> Dict[str, An
     for k, v in defaults_java.items():
         if k not in user_keys_java:
             merged[k] = v
+    
+    # Serialize any function objects to make them JSON-serializable
+    serialized: Dict[str, Any] = {}
+    for k, v in merged.items():
+        serialized[k] = _serialize_config_value(v)
             
-    return merged
+    return serialized

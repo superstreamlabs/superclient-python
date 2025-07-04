@@ -39,6 +39,7 @@ class ProducerTracker:
         self.error = error
         self.metadata = metadata
         self.topics_env = topics_env or []
+        self.start_time_ms = int(time.time() * 1000)  # Unix timestamp in milliseconds
 
     def record_topic(self, topic: str):
         """Record a topic that this producer writes to."""
@@ -52,7 +53,6 @@ class ProducerTracker:
         """Get the most impactful topic for this producer based on metadata analysis."""
         if not self.metadata or not self.metadata.get("topics_configuration"):
             # Fallback to first topic if no metadata available
-            logger.warning("No metadata available for producer {}, falling back to first used topic", self.client_id)
             return sorted(self.topics)[0] if self.topics else ""
         
         # Find matching topic configurations from metadata based on environment topics only
@@ -63,8 +63,6 @@ class ProducerTracker:
         
         if not matches:
             # Fallback to first environment topic if no matches
-            logger.warning("No matching topics found in metadata for producer {} (env topics: {}), falling back to first environment topic", 
-                          self.client_id, self.topics_env)
             return sorted(self.topics_env)[0] if self.topics_env else ""
         
         # Use the same logic as optimal_cfg: find the topic with highest impact

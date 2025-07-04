@@ -19,9 +19,6 @@ if os.getenv("SUPERSTREAM_DEBUG", "false").lower() == "true":
     set_debug_enabled(True)
 
 logger = get_logger("agent")
-logger.info("Superstream Agent initialized with environment variables: {}", _ENV_VARS)
-if is_disabled():
-    logger.warn("Superstream functionality disabled via SUPERSTREAM_DISABLED")
 
 # Preserve reference to built-in import function
 _original_import = builtins.__import__
@@ -47,7 +44,12 @@ def _patch_module(module_name: str) -> None:
             # Check if Producer exists before patching
             confluent_module = sys.modules["confluent_kafka"]
             if hasattr(confluent_module, "Producer"):
-                patch_confluent(confluent_module)
+                # Additional check to ensure we can safely patch
+                try:
+                    patch_confluent(confluent_module)
+                except Exception as patch_exc:
+                    logger.error("[ERR-003] Failed to patch confluent_kafka Producer: {}", patch_exc)
+                    # Don't re-raise, just log the error
     except Exception as exc:
         logger.error("[ERR-001] Failed to patch {}: {}", module_name, exc)
 
@@ -93,6 +95,12 @@ def initialize():
     2. Schedules patching of any pre-imported modules
     3. Starts the heartbeat thread
     """
+    
+    # Log initialization message
+    logger.info("Superstream Agent initialized with environment variables: {}", _ENV_VARS)
+    if is_disabled():
+        logger.warn("Superstream functionality disabled via SUPERSTREAM_DISABLED")
+    
     if is_disabled():
         return
         
