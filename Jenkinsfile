@@ -16,7 +16,31 @@ pipeline {
     }
 
     stages {
+
+        stage('Manual Stage') {
+            when {
+                allOf {
+                    branch 'fix-trigger'
+                    triggeredBy 'UserIdCause' // Manual "Build Now"
+                }
+            }           
+            steps {
+                sh "echo Manual is good"                                                
+            }
+        }
+
         stage('Prepare Environment') {
+            when {
+                anyOf {
+                    allOf {
+                        branch 'master'
+                        triggeredBy 'UserIdCause' // Manual trigger on master
+                    }
+                    allOf {
+                        branch 'latest'
+                    }
+                }
+            }            
             steps {
                 script {
                     sh 'git config --global --add safe.directory $(pwd)'
@@ -41,11 +65,14 @@ pipeline {
             
         stage('Beta Release') {
             when {
-                branch 'master'
-            }            
+                allOf {
+                    branch 'master'
+                    triggeredBy 'UserIdCause' // Manual "Build Now"
+                }
+            }           
             steps {
                 sh '''
-                sed -i -E 's/^(name *= *")superclient(")/\\1superclient-beta\\2/' pyproject.toml
+                sed -i -E 's/^(name *= *")superstream-clients(")/\\1superstream-clients-beta\\2/' pyproject.toml
                 '''                
                 sh 'pip install --quiet build twine'
                 sh 'python -m build'
@@ -106,7 +133,7 @@ pipeline {
                 }                
                 withCredentials([string(credentialsId: 'gh_token', variable: 'GH_TOKEN')]) {
                 sh """
-                gh release create $versionTag dist/superstream_confluent_kafka-${env.versionTag}.tar.gz --generate-notes
+                gh release create $versionTag dist/superstream_clients-${env.versionTag}.tar.gz --generate-notes
                 """
                 }                
             }
@@ -125,14 +152,14 @@ pipeline {
             }
         }
         
-        failure {
-            script {
-                if (env.GIT_BRANCH == 'latest') { 
-                    sendSlackNotification('FAILURE')              
-                    notifyFailed()
-                }
-            }            
-        }
+        // failure {
+        //     script {
+        //         if (env.GIT_BRANCH == 'latest') { 
+        //             sendSlackNotification('FAILURE')              
+        //             notifyFailed()
+        //         }
+        //     }            
+        // }
         aborted {
             script {
                 if (env.BRANCH_NAME == 'latest') {
