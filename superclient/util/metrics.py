@@ -99,38 +99,9 @@ def collect_confluent_metrics(producer: Any) -> Dict[str, Any]:
 def collect_aiokafka_metrics(producer: Any) -> Dict[str, Any]:
     """Collect metrics from aiokafka producer."""
     try:
-        metrics = producer.metrics()
-        if not metrics:
-            return {}
-        
-        # Extract relevant producer metrics - flat structure
-        producer_metrics = {}
-        
-        # aiokafka metrics structure is similar to kafka-python
-        for metric_name, metric_data in metrics.items():
-            # Look for producer-related metrics
-            if any(keyword in metric_name.lower() for keyword in ['producer', 'record', 'batch', 'request', 'connection', 'network', 'io', 'buffer', 'compression']):
-                # Extract the value from the metric data
-                if hasattr(metric_data, 'value'):
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data.value)
-                elif isinstance(metric_data, dict) and 'value' in metric_data:
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data['value'])
-                elif hasattr(metric_data, 'count'):
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data.count)
-                elif hasattr(metric_data, 'mean'):
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data.mean)
-                elif hasattr(metric_data, 'rate'):
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data.rate)
-                elif hasattr(metric_data, 'total'):
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data.total)
-                elif hasattr(metric_data, 'avg'):
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data.avg)
-                elif hasattr(metric_data, 'max'):
-                    producer_metrics[metric_name] = sanitize_metric_value(metric_data.max)
-                else:
-                    producer_metrics[metric_name] = sanitize_metric_value(str(metric_data))
-        
-        return producer_metrics
+        # aiokafka producers don't have a metrics() method
+        # Return empty dict as aiokafka doesn't provide metrics
+        return {}
     except Exception as e:
         logger.error("[ERR-308] Failed to collect aiokafka producer metrics: {}", e)
         return {}
@@ -194,45 +165,9 @@ def collect_confluent_topic_metrics(producer: Any) -> Dict[str, Any]:
 def collect_aiokafka_topic_metrics(producer: Any) -> Dict[str, Any]:
     """Collect topic metrics from aiokafka producer."""
     try:
-        metrics = producer.metrics()
-        if not metrics:
-            return {}
-        
-        topic_metrics = {}
-        
-        # Look for topic-specific metrics - nested structure with topic names as keys
-        for metric_name, metric_data in metrics.items():
-            if 'topic' in metric_name.lower():
-                # Extract topic name from metric name (e.g., "topic.my-topic.record-send-rate")
-                parts = metric_name.split('.')
-                if len(parts) >= 2 and parts[0] == 'topic':
-                    topic_name = parts[1]
-                    metric_key = '.'.join(parts[2:]) if len(parts) > 2 else 'value'
-                    
-                    if topic_name not in topic_metrics:
-                        topic_metrics[topic_name] = {}
-                    
-                    # Extract the value from the metric data
-                    if hasattr(metric_data, 'value'):
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data.value)
-                    elif isinstance(metric_data, dict) and 'value' in metric_data:
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data['value'])
-                    elif hasattr(metric_data, 'count'):
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data.count)
-                    elif hasattr(metric_data, 'mean'):
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data.mean)
-                    elif hasattr(metric_data, 'rate'):
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data.rate)
-                    elif hasattr(metric_data, 'total'):
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data.total)
-                    elif hasattr(metric_data, 'avg'):
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data.avg)
-                    elif hasattr(metric_data, 'max'):
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(metric_data.max)
-                    else:
-                        topic_metrics[topic_name][metric_key] = sanitize_metric_value(str(metric_data))
-        
-        return topic_metrics
+        # aiokafka producers don't have a metrics() method
+        # Return empty dict as aiokafka doesn't provide topic metrics
+        return {}
     except Exception as e:
         logger.error("[ERR-312] Failed to collect aiokafka topic metrics: {}", e)
         return {}
@@ -313,54 +248,9 @@ def collect_confluent_node_metrics(producer: Any) -> Dict[str, Any]:
 def collect_aiokafka_node_metrics(producer: Any) -> Dict[str, Any]:
     """Collect node metrics from aiokafka producer."""
     try:
-        metrics = producer.metrics()
-        if not metrics:
-            return {}
-        
-        node_metrics = {}
-        
-        # Look for node/broker-specific metrics - nested structure with node IDs as keys
-        for metric_name, metric_data in metrics.items():
-            if any(keyword in metric_name.lower() for keyword in ['node', 'broker', 'connection', 'network']):
-                # Extract node ID from metric name (e.g., "node.8.request-rate")
-                parts = metric_name.split('.')
-                if len(parts) >= 2 and parts[0] in ['node', 'broker']:
-                    node_id = parts[1]
-                    
-                    # Filter out bootstrap node metrics
-                    if node_id.startswith('node-bootstrap'):
-                        continue
-                    
-                    # Remove "node-" prefix if present
-                    if node_id.startswith('node-'):
-                        node_id = node_id[5:]  # Remove "node-" prefix
-                    
-                    metric_key = '.'.join(parts[2:]) if len(parts) > 2 else 'value'
-                    
-                    if node_id not in node_metrics:
-                        node_metrics[node_id] = {}
-                    
-                    # Extract the value from the metric data
-                    if hasattr(metric_data, 'value'):
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data.value)
-                    elif isinstance(metric_data, dict) and 'value' in metric_data:
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data['value'])
-                    elif hasattr(metric_data, 'count'):
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data.count)
-                    elif hasattr(metric_data, 'mean'):
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data.mean)
-                    elif hasattr(metric_data, 'rate'):
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data.rate)
-                    elif hasattr(metric_data, 'total'):
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data.total)
-                    elif hasattr(metric_data, 'avg'):
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data.avg)
-                    elif hasattr(metric_data, 'max'):
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(metric_data.max)
-                    else:
-                        node_metrics[node_id][metric_key] = sanitize_metric_value(str(metric_data))
-        
-        return node_metrics
+        # aiokafka producers don't have a metrics() method
+        # Return empty dict as aiokafka doesn't provide node metrics
+        return {}
     except Exception as e:
         logger.error("[ERR-316] Failed to collect aiokafka node metrics: {}", e)
         return {}

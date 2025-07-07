@@ -48,7 +48,7 @@ class ProducerTracker:
         
         # Cache update tracking
         self.last_cache_update = 0.0
-        self.cache_update_interval = 30.0  # Update cache every 10 seconds
+        self.cache_update_interval = 30.0  # Update cache every 30 seconds
         
         # Total tracking fields for cumulative metrics
         self.producer_totals = {
