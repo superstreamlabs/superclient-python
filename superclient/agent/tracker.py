@@ -24,8 +24,9 @@ class ProducerTracker:
         error: str = "",
         metadata: Optional[Dict[str, Any]] = None,
         topics_env: Optional[list[str]] = None,
+        uuid: Optional[str] = None,
     ) -> None:
-        self.uuid = str(uuid.uuid4())
+        self.uuid = uuid if uuid else str(uuid.uuid4())
         self.library = lib
         self.producer = producer
         self.bootstrap = bootstrap
@@ -95,7 +96,7 @@ class ProducerTracker:
             from ..util.metrics import collect_all_metrics, merge_metrics_with_cache
             
             # Collect fresh metrics
-            current_producer_metrics, current_topic_metrics, current_node_metrics = collect_all_metrics(self.producer, self.library)
+            current_producer_metrics, current_topic_metrics, current_node_metrics = collect_all_metrics(self.producer, self.library, self.uuid)
             
             # Get current cached metrics
             cached_producer_metrics, cached_topic_metrics, cached_node_metrics = self.get_cached_metrics()

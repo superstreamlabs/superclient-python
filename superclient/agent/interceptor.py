@@ -1,10 +1,12 @@
 """Producer interception functionality."""
 
 import os
+import uuid
 from typing import Any, Dict
 
 from ..util.logger import get_logger
 from ..util.config import get_topics_list, is_disabled
+from ..util.metrics import configure_confluent_stats_callback
 from .metadata import fetch_metadata_sync, optimal_cfg, _DEFAULTS
 from ..core.reporter import send_clients_msg
 from ..core.manager import normalize_bootstrap
@@ -345,10 +347,18 @@ def patch_confluent(mod):
                             logger.debug("Overriding configuration: {} ((not set) -> {})", k, v)
                         conf[k] = v
                 
+                
+                # Generate UUID for this producer
+                tracker_uuid = str(uuid.uuid4())
+                
+                # Configure stats callback for metrics collection
+                conf = configure_confluent_stats_callback(conf, tracker_uuid)
+                
                 # Create the producer with optimized configuration
                 self._producer = Producer(conf, *args, **kwargs)
                 
                 report_interval = metadata.get("report_interval_ms") if metadata else _DEFAULT_REPORT_INTERVAL_MS
+                # Create tracker with the generated UUID
                 self._tracker = ProducerTracker(
                     lib="confluent",
                     producer=self._producer,
@@ -357,10 +367,12 @@ def patch_confluent(mod):
                     orig_cfg=orig_cfg,
                     opt_cfg=opt_cfg,
                     report_interval_ms=int(report_interval or _DEFAULT_REPORT_INTERVAL_MS),
-                    error=error_msg,  # Store error message in tracker
+                    error=error_msg,
                     metadata=metadata,
                     topics_env=topics_env,
+                    uuid=tracker_uuid,  # Use the generated UUID
                 )
+                
                 Heartbeat.register_tracker(self._tracker)
                 
                 send_clients_msg(self._tracker, error_msg)
@@ -397,12 +409,15 @@ def patch_confluent(mod):
                     self._superstream_closed = True
                     self._tracker.close()
                     Heartbeat.unregister_tracker(self._tracker.uuid)
+                    
+                    # Remove metrics extractor from registry
+                    from ..util.metrics import remove_producer_metrics_extractor
+                    remove_producer_metrics_extractor(self._tracker.uuid)
+                    
                     logger.debug("Superstream tracking stopped for confluent-kafka producer with client_id: {}", 
                                getattr(self._tracker, 'client_id', 'unknown'))
                 except Exception as e:
                     logger.error("Error during automatic cleanup: {}", e)
-            else:
-                logger.debug("Producer already cleaned up or no tracker found")
         
         def __getattr__(self, name):
             """Delegate all other attributes to the underlying producer."""
