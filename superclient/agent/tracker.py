@@ -2,7 +2,7 @@
 
 import threading
 import time
-import uuid
+import uuid as uuid_lib
 from typing import Any, Dict, Optional
 
 from ..util.logger import get_logger
@@ -26,7 +26,7 @@ class ProducerTracker:
         topics_env: Optional[list[str]] = None,
         uuid: Optional[str] = None,
     ) -> None:
-        self.uuid = uuid if uuid else str(uuid.uuid4())
+        self.uuid = uuid if uuid else str(uuid_lib.uuid4())
         self.library = lib
         self.producer = producer
         self.bootstrap = bootstrap

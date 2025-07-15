@@ -3,6 +3,7 @@
 import os
 import uuid
 from typing import Any, Dict
+import importlib
 
 from ..util.logger import get_logger
 from ..util.config import get_topics_list, is_disabled
@@ -245,8 +246,102 @@ def patch_aiokafka(mod):
                     await original_stop(*a, **kw)
 
                 self.stop = stop_patch
+                
+                # Patch the SendProduceReqHandler.create_request method for this specific producer
+                sender_mod = importlib.import_module("aiokafka.producer.sender")
+                
+                # Only patch once globally
+                if not hasattr(sender_mod.SendProduceReqHandler, '_superstream_patched'):
+                    orig_create_request = sender_mod.SendProduceReqHandler.create_request
+                    
+                    def create_request_with_metrics(self_handler):
+                        # Call the original method to get the request, but collect metrics
+                        # self_handler._batches: Dict[TopicPartition, MessageBatch]
+                        
+                        # Quick check: if sender has no tracker, it's an internal producer - skip metrics
+                        if not hasattr(self_handler._sender, '_superstream_tracker'):
+                            return orig_create_request(self_handler)
+                            
+                        tracker = self_handler._sender._superstream_tracker
+                        
+                        # Additional check: skip internal producers by client_id
+                        if tracker is None or tracker.client_id.startswith(_SUPERLIB_PREFIX):
+                            return orig_create_request(self_handler)
+                            
+                        # Per-producer totals
+                        total_uncompressed = 0
+                        total_compressed = 0
+                        total_records = 0
+                        topic_stats = {}
+                        for tp, batch in self_handler._batches.items():
+                            # Get record count from the batch
+                            record_count = batch.record_count
+                            
+                            # Get compressed size from the batch buffer
+                            compressed = 0
+                            try:
+                                compressed = len(batch.get_data_buffer())
+                            except Exception:
+                                pass
+                            
+                            # Estimate uncompressed size based on record count
+                            # Since we can't easily access the original message data at this point,
+                            # we'll use a reasonable estimate based on the batch size and record count
+                            if record_count > 0:
+                                # Estimate uncompressed size based on compressed size and typical compression ratios
+                                # This is an approximation since we can't access the original message data
+                                estimated_compression_ratio = 0.7  # Assume 30% compression
+                                uncompressed = int(compressed / estimated_compression_ratio)
+                            else:
+                                uncompressed = 0
+                            
+                            total_uncompressed += uncompressed
+                            total_compressed += compressed
+                            total_records += record_count
+                            # Per-topic
+                            if tp.topic not in topic_stats:
+                                topic_stats[tp.topic] = {'uncompressed': 0, 'compressed': 0, 'records': 0}
+                            topic_stats[tp.topic]['uncompressed'] += uncompressed
+                            topic_stats[tp.topic]['compressed'] += compressed
+                            topic_stats[tp.topic]['records'] += record_count
+                        # Update tracker
+                        if total_records > 0:
+                            tracker._superstream_metrics = getattr(tracker, '_superstream_metrics', {})
+                            m = tracker._superstream_metrics
+                            # Accumulate totals (aggregative counters)
+                            m['outgoing-byte-total'] = m.get('outgoing-byte-total', 0) + total_compressed
+                            m['record-send-total'] = m.get('record-send-total', 0) + total_records
+                            m['uncompressed-byte-total'] = m.get('uncompressed-byte-total', 0) + total_uncompressed
+                            
+                            # Calculate rates from aggregated totals
+                            m['compression-rate-avg'] = (m['outgoing-byte-total'] / m['uncompressed-byte-total']) if m['uncompressed-byte-total'] else 1.0
+                            m['record-size-avg'] = (m['uncompressed-byte-total'] / m['record-send-total']) if m['record-send-total'] else 0
+                            
+                            # Per-topic
+                            m['topics'] = m.get('topics', {})
+                            for topic, stats in topic_stats.items():
+                                t = m['topics'].setdefault(topic, {'byte-total': 0, 'record-send-total': 0, 'uncompressed-total': 0})
+                                # Accumulate totals (aggregative counters)
+                                t['byte-total'] = t.get('byte-total', 0) + stats['compressed']
+                                t['record-send-total'] = t.get('record-send-total', 0) + stats['records']
+                                t['uncompressed-total'] = t.get('uncompressed-total', 0) + stats['uncompressed']
+                                
+                                # Calculate compression rate from aggregated totals
+                                t['compression-rate'] = (t['byte-total'] / t['uncompressed-total']) if t['uncompressed-total'] else 1.0
+                                
+                            tracker._superstream_metrics = m
+                        return orig_create_request(self_handler)
+                    
+                    sender_mod.SendProduceReqHandler.create_request = create_request_with_metrics
+                    sender_mod.SendProduceReqHandler._superstream_patched = True
+                
                 self._superstream_patch = True
             orig_init(self, *args, **kwargs)
+            
+                        # Store tracker reference in the sender for metrics collection
+            if hasattr(self, '_sender'):
+                self._sender._superstream_tracker = tr
+            
             send_clients_msg(tr, error_msg)
             
             # Log success message based on whether defaults were used

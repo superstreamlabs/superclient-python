@@ -92,11 +92,20 @@ def collect_confluent_producer_metrics(tracker_uuid: str) -> Dict[str, Any]:
         return {}
 
 
-def collect_aiokafka_metrics(producer: Any) -> Dict[str, Any]:
+def collect_aiokafka_producer_metrics(producer: Any) -> Dict[str, Any]:
     """Collect metrics from aiokafka producer."""
     try:
-        # aiokafka producers don't have a metrics() method
-        # Return empty dict as aiokafka doesn't provide metrics
+        # Get the tracker from the sender (where we store it in aiokafka)
+        if hasattr(producer, '_sender') and hasattr(producer._sender, '_superstream_tracker'):
+            tracker = producer._sender._superstream_tracker
+            if hasattr(tracker, '_superstream_metrics'):
+                metrics = tracker._superstream_metrics
+                # Return only the producer-level metrics (not topics)
+                producer_metrics = {}
+                for key in ['outgoing-byte-total', 'compression-rate-avg', 'record-send-total', 'record-size-avg']:
+                    if key in metrics:
+                        producer_metrics[key] = sanitize_metric_value(metrics[key])
+                return producer_metrics
         return {}
     except Exception as e:
         logger.error("[ERR-308] Failed to collect aiokafka producer metrics: {}", e)
@@ -151,8 +160,18 @@ def collect_confluent_topic_metrics(tracker_uuid: str) -> Dict[str, Any]:
 def collect_aiokafka_topic_metrics(producer: Any) -> Dict[str, Any]:
     """Collect topic metrics from aiokafka producer."""
     try:
-        # aiokafka producers don't have a metrics() method
-        # Return empty dict as aiokafka doesn't provide topic metrics
+        # Get the tracker from the sender (where we store it in aiokafka)
+        if hasattr(producer, '_sender') and hasattr(producer._sender, '_superstream_tracker'):
+            tracker = producer._sender._superstream_tracker
+            if hasattr(tracker, '_superstream_metrics') and 'topics' in tracker._superstream_metrics:
+                topic_metrics = {}
+                for topic_name, topic_data in tracker._superstream_metrics['topics'].items():
+                    # Return only the required topic metrics
+                    topic_metrics[topic_name] = {}
+                    for key in ['byte-total', 'compression-rate', 'record-send-total']:
+                        if key in topic_data:
+                            topic_metrics[topic_name][key] = sanitize_metric_value(topic_data[key])
+                return topic_metrics
         return {}
     except Exception as e:
         logger.error("[ERR-312] Failed to collect aiokafka topic metrics: {}", e)
@@ -283,7 +302,7 @@ def collect_all_metrics(producer: Any, library: str, tracker_uuid: str = None) -
             topic_metrics = collect_confluent_topic_metrics(tracker_uuid)
             node_metrics = collect_confluent_node_metrics(tracker_uuid)
         elif library == "aiokafka":
-            producer_metrics = collect_aiokafka_metrics(producer)
+            producer_metrics = collect_aiokafka_producer_metrics(producer)
             topic_metrics = collect_aiokafka_topic_metrics(producer)
             node_metrics = collect_aiokafka_node_metrics(producer)
         else:
