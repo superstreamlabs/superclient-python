@@ -136,6 +136,15 @@ def send_clients_msg(tracker: Any, error: str = "") -> None:
     opt_cfg_dot = translate_lib_to_java(tracker.opt_cfg, tracker.library)
     opt_cfg_masked = {k: mask_sensitive(k, v) for k, v in opt_cfg_dot.items()}
 
+    # Get metrics from cache (updated every 30 seconds in background)
+    try:
+        producer_metrics, topic_metrics, node_metrics = tracker.get_cached_metrics()
+        logger.debug("Reporting cached metrics for producer {}", tracker.client_id)
+    except Exception as e:
+        logger.error("[ERR-305] Failed to get cached metrics for producer with client id {}: {}", tracker.client_id, e)
+        # Fallback to empty metrics
+        producer_metrics, topic_metrics, node_metrics = {}, {}, {}
+
     msg = ClientMessage(
         client_id=tracker.client_id,
         ip_address=ip,
@@ -150,9 +159,9 @@ def send_clients_msg(tracker: Any, error: str = "") -> None:
         most_impactful_topic=tracker.determine_topic(),
         language=f"Python ({tracker.library})",
         error=error,
-        producer_metrics={},
-        topic_metrics={},
-        node_metrics={},
+        producer_metrics=producer_metrics,
+        topic_metrics=topic_metrics,
+        node_metrics=node_metrics,
         app_info_metrics={"start-time-ms": str(tracker.start_time_ms)},
     )
     payload = json.dumps(msg.__dict__).encode()
