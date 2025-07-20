@@ -40,7 +40,7 @@ def create_producer(client_id):
         'sasl.password': SASL_PASSWORD,
         'client.id': client_id,
         'linger.ms': LINGER_MS,
-        'batch.num.messages': BATCH_SIZE
+        'batch.size': BATCH_SIZE
     })
 
 def send_messages_to_topics(producer, topics, producer_name, num_messages=50):

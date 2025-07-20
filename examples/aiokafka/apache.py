@@ -21,7 +21,7 @@ async def create_producer(client_id):
     await producer.start()
     return producer
 
-async def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
+async def send_messages_to_topics(producer, topics, producer_name, num_messages=5):
     """Send random JSON messages to specified Kafka topics"""
     
     successful = 0
@@ -36,7 +36,7 @@ async def send_messages_to_topics(producer, topics, producer_name, num_messages=
             
             # Send message to each topic
             for topic in topics:
-                result = await producer.send_and_wait(topic, message)
+                result = await producer.send(topic, message)
             
             successful += 1
             
@@ -55,7 +55,7 @@ async def main():
     try:
         # Create two separate producers
         producer1 = await create_producer('aiokafka-producer-1')
-        producer2 = await create_producer('aiokafka-producer-2')
+        # producer2 = await create_producer('aiokafka-producer-2')
         
         # First producer sends to test-topic and test-topic-1
         topics1 = ['test-topic', 'test-topic-1']
@@ -63,22 +63,21 @@ async def main():
         
         # Second producer sends to test-topic-2 and test-topic-3
         topics2 = ['test-topic-2', 'test-topic-3']
-        await send_messages_to_topics(producer2, topics2, 'aiokafka-producer-2')
-        
+        # await send_messages_to_topics(producer2, topics2, 'aiokafka-producer-2')
+        # Sleep for 10 minutes at the end
+        print("Sleeping for 10 minutes...")
+        await asyncio.sleep(600)
+        print("Sleep completed")
     except Exception as e:
         print(f"Error: {e}")
     finally:
         if producer1:
             await producer1.stop()
             print("Producer 1 closed")
-        if producer2:
-            await producer2.stop()
-            print("Producer 2 closed")
+        # if producer2:
+        #     await producer2.stop()
+        #     print("Producer 2 closed")
     
-    # Sleep for 10 minutes at the end
-    print("Sleeping for 10 minutes...")
-    await asyncio.sleep(600)
-    print("Sleep completed")
 
 if __name__ == "__main__":
     # Run the async main function
