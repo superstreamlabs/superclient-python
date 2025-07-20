@@ -85,9 +85,9 @@ def patch_kafka_python(mod):
                 current_val = kwargs.get(k)
                 if current_val != v:
                     if k in kwargs:
-                        logger.debug("Overriding configuration: {} ({} -> {})", k, current_val, v)
+                        logger.info("Overriding configuration: {} ({} -> {})", k, current_val, v)
                     else:
-                        logger.debug("Overriding configuration: {} ((not set) -> {})", k, v)
+                        logger.info("Overriding configuration: {} ((not set) -> {})", k, v)
                     kwargs[k] = v
 
             # Set up reporting interval
@@ -209,9 +209,9 @@ def patch_aiokafka(mod):
                 current_val = kwargs.get(k)
                 if current_val != v:
                     if k in kwargs:
-                        logger.debug("Overriding configuration: {} ({} -> {})", k, current_val, v)
+                        logger.info("Overriding configuration: {} ({} -> {})", k, current_val, v)
                     else:
-                        logger.debug("Overriding configuration: {} ((not set) -> {})", k, v)
+                        logger.info("Overriding configuration: {} ((not set) -> {})", k, v)
                     kwargs[k] = v
             report_interval = metadata.get("report_interval_ms") if metadata else _DEFAULT_REPORT_INTERVAL_MS
             tr = ProducerTracker(
@@ -437,9 +437,9 @@ def patch_confluent(mod):
                     current_val = conf.get(k)
                     if current_val != v:
                         if k in conf:
-                            logger.debug("Overriding configuration: {} ({} -> {})", k, current_val, v)
+                            logger.info("Overriding configuration: {} ({} -> {})", k, current_val, v)
                         else:
-                            logger.debug("Overriding configuration: {} ((not set) -> {})", k, v)
+                            logger.info("Overriding configuration: {} ((not set) -> {})", k, v)
                         conf[k] = v
                 
                 
