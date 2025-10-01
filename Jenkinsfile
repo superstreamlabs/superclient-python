@@ -4,7 +4,7 @@ pipeline {
 
     agent {
         docker {
-            label 'memphis-jenkins-big-fleet,'
+            label 'big-ec2-fleet'
             image 'python:3.11.9-bullseye'
             args '-u root'
         }
