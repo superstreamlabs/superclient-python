@@ -10,7 +10,7 @@ jobs:
   beta-release:
     name: Beta Release
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/github-actions'
     
     steps:
       - name: Checkout code
