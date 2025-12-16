@@ -1,32 +1,94 @@
-name: Trigger Jenkins Job
+name: Release Pipeline
 
 on:
   push:
     branches:
+      - master
       - latest
-    paths:
-      - pyproject.toml
 
 jobs:
-  trigger-jenkins:
-    runs-on: self-hosted
-
+  beta-release:
+    name: Beta Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Trigger Jenkins Job
-        env:
-          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
         run: |
-          HTTP_STATUS=$(curl -w "%{http_code}" -o /tmp/jenkins_response.txt -f -X POST \
-            "https://jenkins.superstream.ai/job/DevOps/job/Superstream/job/SDK/job/superstream-clients-python/buildWithParameters?DEPLOYMENT_TYPE=production" \
-            --user "team@superstream.ai:$JENKINS_TOKEN")
+          pip install --quiet build twine
           
-          if [ $? -ne 0 ] || [ "$HTTP_STATUS" -ne 201 ] && [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "Jenkins trigger failed with HTTP status: $HTTP_STATUS"
-            cat /tmp/jenkins_response.txt
-            exit 1
-          fi
+      - name: Modify package name for beta
+        run: |
+          sed -i -E 's/^(name *= *")superstream-clients(")/\1superstream-clients-beta\2/' pyproject.toml
           
-          echo "Successfully triggered Jenkins build (HTTP $HTTP_STATUS)"  
+      - name: Build package
+        run: python -m build
+        
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          twine upload dist/*
+
+  prod-release:
+    name: Production Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/latest'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install --quiet build twine toml
+          
+      - name: Build package
+        run: python -m build
+        
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          twine upload dist/*
+          
+      - name: Get version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(python3 -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+          
+      - name: Create Git tag
+        run: |
+          git config user.email "github-actions@superstream.ai"
+          git config user.name "GitHub Actions"
+          git tag -a ${{ steps.get_version.outputs.version }} -m "${{ steps.get_version.outputs.version }}"
+          git push origin ${{ steps.get_version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          files: dist/superstream_clients-${{ steps.get_version.outputs.version }}.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
