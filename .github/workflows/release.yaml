@@ -3,14 +3,14 @@ name: Release Pipeline
 on:
   push:
     branches:
-      - github-actions
+      - master
       - latest
 
 jobs:
   beta-release:
     name: Beta Release
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/github-actions'
+    if: github.ref == 'refs/heads/master'
     
     steps:
       - name: Checkout code
