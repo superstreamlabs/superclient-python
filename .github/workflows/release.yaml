@@ -11,6 +11,9 @@ jobs:
     name: Beta Release
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      status: ${{ job.status }}
     
     steps:
       - name: Checkout code
@@ -23,7 +26,7 @@ jobs:
           
       - name: Install dependencies
         run: |
-          pip install --quiet build twine
+          pip install --quiet build twine toml
           
       - name: Modify package name for beta
         run: |
@@ -38,11 +41,21 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
           twine upload dist/*
+          
+      - name: Get version
+        if: always()
+        id: get_version
+        run: |
+          VERSION=$(python3 -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
   prod-release:
     name: Production Release
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/latest'
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      status: ${{ job.status }}
     
     steps:
       - name: Checkout code
@@ -68,6 +81,7 @@ jobs:
           twine upload dist/*
           
       - name: Get version from pyproject.toml
+        if: always()
         id: get_version
         run: |
           VERSION=$(python3 -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
@@ -91,4 +105,86 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [beta-release, prod-release]
+    if: always()
+    
+    steps:
+      - name: Determine release type and status
+        id: release_info
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/master" ]; then
+            echo "type=Beta" >> $GITHUB_OUTPUT
+            echo "version=${{ needs.beta-release.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "result=${{ needs.beta-release.result }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=Production" >> $GITHUB_OUTPUT
+            echo "version=${{ needs.prod-release.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "result=${{ needs.prod-release.result }}" >> $GITHUB_OUTPUT
+          fi
           
+      - name: Send Slack notification on success
+        if: steps.release_info.outputs.result == 'success'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ SUCCESSFUL: ${{ steps.release_info.outputs.type }} Release ${{ steps.release_info.outputs.version }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*${{ steps.release_info.outputs.type }} Release Successful* ✅\n*Version:* ${{ steps.release_info.outputs.version }}\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* <${{ github.event.head_commit.url }}|${{ github.sha }}>\n*Author:* ${{ github.event.head_commit.author.name }}\n*Message:* ${{ github.event.head_commit.message }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+          
+      - name: Send Slack notification on failure
+        if: steps.release_info.outputs.result == 'failure'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "❌ FAILED: ${{ steps.release_info.outputs.type }} Release",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*${{ steps.release_info.outputs.type }} Release Failed* ❌\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* <${{ github.event.head_commit.url }}|${{ github.sha }}>\n*Author:* ${{ github.event.head_commit.author.name }}\n*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+        
+      - name: Send Slack notification on cancellation
+        if: steps.release_info.outputs.result == 'cancelled'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "⚠️ ABORTED: ${{ steps.release_info.outputs.type }} Release",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*${{ steps.release_info.outputs.type }} Release Aborted* ⚠️\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* <${{ github.event.head_commit.url }}|${{ github.sha }}>\n*Author:* ${{ github.event.head_commit.author.name }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
