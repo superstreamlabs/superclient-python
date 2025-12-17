@@ -1,0 +1,177 @@
+name: Release Pipeline
+
+on:
+  push:
+    branches:
+      - master
+      - latest
+
+jobs:
+  beta-release:
+    name: Beta Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      status: ${{ job.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install --quiet build twine toml
+          
+      - name: Modify package name for beta
+        run: |
+          sed -i -E 's/^(name *= *")superstream-clients(")/\1superstream-clients-beta\2/' pyproject.toml
+          
+      - name: Build package
+        run: python -m build
+        
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          twine upload dist/*
+          
+      - name: Get version
+        if: always()
+        id: get_version
+        run: |
+          VERSION=$(python3 -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  prod-release:
+    name: Production Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/latest'
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      status: ${{ job.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install --quiet build twine toml
+          
+      - name: Build package
+        run: python -m build
+        
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          twine upload dist/*
+          
+      - name: Get version from pyproject.toml
+        if: always()
+        id: get_version
+        run: |
+          VERSION=$(python3 -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+          
+      - name: Create Git tag
+        run: |
+          git config user.email "github-actions@superstream.ai"
+          git config user.name "GitHub Actions"
+          git tag -a ${{ steps.get_version.outputs.version }} -m "${{ steps.get_version.outputs.version }}"
+          git push origin ${{ steps.get_version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          files: dist/superstream_clients-${{ steps.get_version.outputs.version }}.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: prod-release
+    if: always() && github.ref == 'refs/heads/latest'
+    
+    steps:
+      - name: Send Slack notification on success
+        if: needs.prod-release.result == 'success'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "superstream-python-clients v${{ needs.prod-release.outputs.version }} Production Release SUCCESSFUL ✅",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*superstream-python-clients v${{ needs.prod-release.outputs.version }} Production Release SUCCESSFUL* ✅\n*Branch:* ${{ github.ref_name }}\n*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Author:* ${{ github.event.head_commit.author.name }}\n*Release:* <${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.prod-release.outputs.version }}|View Release>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+          
+      - name: Send Slack notification on failure
+        if: needs.prod-release.result == 'failure'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "superstream-python-clients v${{ needs.prod-release.outputs.version }} Production Release FAILED ❌",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*superstream-python-clients v${{ needs.prod-release.outputs.version }} Production Release FAILED* ❌\n*Branch:* ${{ github.ref_name }}\n*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Author:* ${{ github.event.head_commit.author.name }}\n*Workflow Run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+        
+      - name: Send Slack notification on cancellation
+        if: needs.prod-release.result == 'cancelled'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "superstream-python-clients v${{ needs.prod-release.outputs.version }} Production Release ABORTED ⚠️",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*superstream-python-clients v${{ needs.prod-release.outputs.version }} Production Release ABORTED* ⚠️\n*Branch:* ${{ github.ref_name }}\n*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Author:* ${{ github.event.head_commit.author.name }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true

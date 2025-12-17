@@ -56,9 +56,8 @@ def send_messages_to_topics(producer, topics, producer_name, num_messages=50):
             print(f"Failed to send message {i+1}: {e}")
         
         # Small delay between messages (optional)
-        time.sleep(0.01)
+        time.sleep(2)
 
-    producer.flush(timeout=30)
     print(f"\n{producer_name} Summary: {successful} successful, {failed} failed")
 
 def main():
@@ -67,7 +66,7 @@ def main():
     try:
         # Create two separate producers
         producer1 = create_producer('confluent-kafka-producer-1')
-        producer2 = create_producer('confluent-kafka-producer-2')
+        # producer2 = create_producer('confluent-kafka-producer-2')
         
         # First producer sends to test-topic and test-topic-1
         topics1 = ['test-topic', 'test-topic-1']
@@ -75,15 +74,23 @@ def main():
         
         # Second producer sends to test-topic-2 and test-topic-3
         topics2 = ['test-topic-2', 'test-topic-3']
-        send_messages_to_topics(producer2, topics2, 'confluent-kafka-producer-2')
-        
+        # send_messages_to_topics(producer2, topics2, 'confluent-kafka-producer-2')
+        print("Sleeping...")
+        time.sleep(30)
+        print("Sleep completed")
     except Exception as e:
         print(f"Error: {e}")
     
-    # Sleep for 10 minutes at the end
-    print("Sleeping for 10 minutes...")
-    time.sleep(600)
-    print("Sleep completed")
+    # Explicitly set producers to None to force garbage collection
+    print("Setting producers to None to trigger Superstream cleanup...")
+    producer1 = None
+    # producer2 = None
+    
+    # Force garbage collection to trigger __del__ immediately
+    import gc
+    print("Forcing garbage collection...")
+    gc.collect()
+    print("Garbage collection completed")
 
 if __name__ == "__main__":
     main()

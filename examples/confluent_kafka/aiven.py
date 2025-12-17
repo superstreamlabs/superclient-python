@@ -42,7 +42,7 @@ def create_producer(client_id):
         'ssl.ca.location': SSL_CAFILE,
         'ssl.certificate.location': SSL_CERTFILE,
         'ssl.key.location': SSL_KEYFILE,
-        'batch.num.messages': BATCH_SIZE,
+        'batch.size': BATCH_SIZE,
         'linger.ms': LINGER_MS
     })
 
